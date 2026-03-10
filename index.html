@@ -16,6 +16,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <style>
 /* ═══════════════════════════════════════════
    أجواء أفراح مصري — Egyptian Wedding Theme
@@ -297,12 +298,54 @@ h1.logo{
 @keyframes loadBar{0%{width:0}60%{width:80%}100%{width:100%}}
 .splash-sub{font-family:'Amiri',serif;color:rgba(212,175,55,.5);font-size:.85rem;letter-spacing:3px;}
 
+/* ══ LOGIN SCREEN ══ */
+#login-screen{gap:1.2rem;padding:2rem;padding-top:3rem;background:var(--bg);}
+.login-logo{font-family:'Amiri',serif;font-size:5rem;font-weight:700;color:var(--gold);text-shadow:0 0 40px rgba(212,175,55,.7);line-height:1;}
+.login-title{font-family:'Amiri',serif;font-size:1.4rem;color:var(--gold-l);text-align:center;}
+.login-sub{font-size:.82rem;color:rgba(255,248,231,.45);text-align:center;line-height:1.7;}
+.login-card{background:linear-gradient(160deg,rgba(42,18,0,.95),rgba(20,8,0,.95));border:1px solid rgba(212,175,55,.22);border-radius:22px;padding:2rem 1.5rem;width:100%;max-width:340px;display:flex;flex-direction:column;align-items:center;gap:1.1rem;box-shadow:0 20px 60px rgba(0,0,0,.6);}
+.login-card::before{content:'✦ ❧ ✦';font-size:.65rem;color:rgba(212,175,55,.3);letter-spacing:.5rem;font-family:'Amiri',serif;}
+.btn-google{display:flex;align-items:center;justify-content:center;gap:.75rem;background:#fff;color:#1a1a1a;border:none;border-radius:50px;padding:.85rem 1.8rem;font-family:'Cairo',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer;width:100%;box-shadow:0 4px 20px rgba(0,0,0,.4);transition:all .25s;position:relative;overflow:hidden;}
+.btn-google:hover{transform:translateY(-3px);box-shadow:0 8px 30px rgba(0,0,0,.5);}
+.btn-google:active{transform:translateY(0);}
+.btn-google svg{width:22px;height:22px;flex-shrink:0;}
+.login-divider{width:100%;display:flex;align-items:center;gap:.7rem;color:rgba(255,248,231,.2);font-size:.72rem;}
+.login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:rgba(212,175,55,.12);}
+.btn-guest{background:transparent;border:1px solid rgba(212,175,55,.25);color:rgba(255,248,231,.6);border-radius:50px;padding:.7rem 1.8rem;font-family:'Cairo',sans-serif;font-size:.85rem;cursor:pointer;width:100%;transition:all .22s;}
+.btn-guest:hover{border-color:rgba(212,175,55,.5);color:var(--gold-l);}
+.login-footer{font-size:.65rem;color:rgba(255,248,231,.2);text-align:center;line-height:1.6;}
+
+/* ══ USER AVATAR in top bar ══ */
+.user-chip{display:flex;align-items:center;gap:.45rem;background:rgba(212,175,55,.08);border:1px solid rgba(212,175,55,.2);border-radius:20px;padding:.2rem .6rem .2rem .3rem;cursor:pointer;}
+.user-avatar{width:26px;height:26px;border-radius:50%;object-fit:cover;border:1px solid rgba(212,175,55,.4);}
+.user-avatar-txt{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--gold-d),var(--gold));color:var(--dark);display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;}
+.user-name-chip{font-size:.7rem;color:var(--gold-l);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.btn-logout{background:transparent;border:none;color:rgba(255,248,231,.3);font-size:.65rem;cursor:pointer;padding:.15rem .3rem;font-family:'Cairo',sans-serif;transition:color .2s;}
+.btn-logout:hover{color:var(--rose);}
 </style>
 </head>
 <body>
 
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen" class="screen active">
+  <div class="login-logo">الفرح</div>
+  <div class="login-title">لعبة الكروت المصرية</div>
+  <div class="login-sub">العريس · العروسة · المأذون · الشهود<br>اجمعهم قبل أي حد تاني!</div>
+  <div class="login-card">
+    <button class="btn-google" onclick="loginWithGoogle()">
+      <!-- Google SVG logo -->
+      <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      تسجيل الدخول بـ Google
+    </button>
+    <div class="login-divider">أو</div>
+    <button class="btn-guest" onclick="loginAsGuest()">👤 دخول كضيف</button>
+    <div class="login-footer">بتسجيل الدخول، اسمك بيظهر لباقي اللاعبين<br>بياناتك محمية ومش بتتشارك</div>
+  </div>
+</div>
+
 <!-- TITLE -->
-<div id="title-screen" class="screen active">
+<div id="title-screen" class="screen">
   <div class="zaffa-banner">🥁 زَفَّة الفرح 🥁</div>
   <h1 class="logo">الفرح</h1>
   <p class="logo-sub">لعبة الكروت المخفية</p>
@@ -390,7 +433,14 @@ h1.logo{
   <div class="top-bar">
     <span class="top-title">🏮 الفرح</span>
     <div class="turn-badge" id="turn-badge">دور: ---</div>
-    <div style="font-size:.68rem;color:rgba(255,248,231,.38)" id="round-lbl">جولة ١</div>
+    <div style="display:flex;align-items:center;gap:.4rem;">
+      <div style="font-size:.68rem;color:rgba(255,248,231,.38)" id="round-lbl">جولة ١</div>
+      <div class="user-chip" id="user-chip" onclick="showUserMenu()" style="display:none">
+        <img class="user-avatar" id="user-avatar-img" src="" style="display:none">
+        <div class="user-avatar-txt" id="user-avatar-txt">؟</div>
+        <span class="user-name-chip" id="user-name-chip">ضيف</span>
+      </div>
+    </div>
   </div>
   <div class="game-table">
     <div class="opp-row" id="opp-row"></div>
@@ -529,7 +579,11 @@ function mkCard(c,revealed,clickFn){
 
 /* ─── START ─── */
 function startGame(){
-  const names=[0,1,2,3].map(i=>$('n'+i).value.trim()||`لاعب ${i+1}`);
+  const names=[0,1,2,3].map(i=>{
+    const v=$('n'+i).value.trim();
+    if(i===0) return v||(currentUser?.name)||'أنت';
+    return v||`لاعب ${i+1}`;
+  });
   G={
     players:names.map((name,i)=>({name,hand:[],score:0,isHuman:i===0,protected:false})),
     deck:buildDeck(),discard:[],
@@ -1137,7 +1191,7 @@ function closeModal(){
 }
 
 /* ════════════════════════════════════════
-   ONLINE MULTIPLAYER — Firebase
+   FIREBASE — Auth + Realtime DB
 ════════════════════════════════════════ */
 const FB_CONFIG={
   apiKey:"AIzaSyDxyTDVM9NXudPTeT5Qyf75Xpqd7eFSoQQ",
@@ -1150,19 +1204,139 @@ const FB_CONFIG={
   measurementId:"G-WVHDH6XC6K"
 };
 
-let fbApp=null, fbDB=null, onlineRoom=null, myPlayerId=null, myPlayerIndex=-1, isHost=false;
+let fbApp=null, fbDB=null, fbAuth=null;
+let currentUser=null; // { uid, name, email, photo, isGuest }
+let onlineRoom=null, myPlayerId=null, myPlayerIndex=-1, isHost=false;
+let guestCounter=Math.floor(100+Math.random()*900);
 
+/* ── Init Firebase (once) ── */
 function initFirebase(){
   if(fbApp) return true;
   try{
     fbApp=firebase.initializeApp(FB_CONFIG);
     fbDB=firebase.database();
+    fbAuth=firebase.auth();
+
+    // Watch auth state
+    fbAuth.onAuthStateChanged(user=>{
+      if(user){
+        currentUser={
+          uid:user.uid,
+          name:user.displayName||user.email?.split('@')[0]||'مجهول',
+          email:user.email||'',
+          photo:user.photoURL||'',
+          isGuest:user.isAnonymous
+        };
+        onUserLoggedIn();
+      } else {
+        currentUser=null;
+      }
+    });
     return true;
-  }catch(e){
-    // Firebase not available or config invalid — show helpful message
-    return false;
-  }
+  }catch(e){ console.error('Firebase init error:',e); return false; }
 }
+
+/* ── Called when user is authenticated ── */
+function onUserLoggedIn(){
+  // Fill player name fields automatically
+  const nm=currentUser.name;
+  const n0=$('n0'); if(n0 && (n0.value==='أنت'||n0.value==='')) n0.value=nm;
+  const on=$('on-name'); if(on && (on.value==='أنت'||on.value==='')) on.value=nm;
+  const jn=$('join-name'); if(jn && (jn.value==='أنا'||jn.value==='')) jn.value=nm;
+
+  // Update user chip in top bar
+  const chip=$('user-chip');
+  const avatarTxt=$('user-avatar-txt');
+  const avatarImg=$('user-avatar-img');
+  const nameChip=$('user-name-chip');
+  if(chip){
+    chip.style.display='flex';
+    if(nameChip) nameChip.textContent=nm.split(' ')[0];
+    if(currentUser.photo && avatarImg){
+      avatarImg.src=currentUser.photo;
+      avatarImg.style.display='block';
+      if(avatarTxt) avatarTxt.style.display='none';
+    } else if(avatarTxt){
+      avatarTxt.textContent=nm.charAt(0)||'؟';
+    }
+  }
+
+  // Show title screen
+  showScreen('title-screen');
+}
+
+/* ── Google Sign-In ── */
+function loginWithGoogle(){
+  if(!initFirebase()){ alert('خطأ في الاتصال بـ Firebase'); return; }
+  const btn=document.querySelector('.btn-google');
+  if(btn){ btn.textContent='⏳ جاري الدخول…'; btn.disabled=true; }
+
+  const provider=new firebase.auth.GoogleAuthProvider();
+  provider.setCustomParameters({prompt:'select_account'});
+
+  fbAuth.signInWithPopup(provider)
+    .then(result=>{
+      // onAuthStateChanged will handle the rest
+    })
+    .catch(err=>{
+      console.error('Google login error:',err);
+      if(btn){ btn.innerHTML='<svg viewBox="0 0 48 48" style="width:22px;height:22px"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg> تسجيل الدخول بـ Google'; btn.disabled=false; }
+      let msg='حصل خطأ في تسجيل الدخول';
+      if(err.code==='auth/popup-blocked') msg='المتصفح منع النافذة المنبثقة!\nفعّل الـ Popup للموقع أو جرب مرة تانية';
+      else if(err.code==='auth/cancelled-popup-request') return;
+      else if(err.code==='auth/unauthorized-domain') msg='الدومين مش مضاف في Firebase!\nروح Authentication → Settings → Authorized domains';
+      toast(msg,'warn');
+    });
+}
+
+/* ── Guest login ── */
+function loginAsGuest(){
+  if(!initFirebase()){ guestFallback(); return; }
+  fbAuth.signInAnonymously()
+    .then(result=>{
+      currentUser={
+        uid:result.user.uid,
+        name:`ضيف ${guestCounter}`,
+        email:'',photo:'',isGuest:true
+      };
+      onUserLoggedIn();
+    })
+    .catch(()=>guestFallback());
+}
+
+function guestFallback(){
+  currentUser={uid:'guest-'+Date.now(),name:`ضيف ${guestCounter}`,email:'',photo:'',isGuest:true};
+  onUserLoggedIn();
+}
+
+/* ── Logout ── */
+function logout(){
+  closeModal();
+  if(fbAuth) fbAuth.signOut().catch(()=>{});
+  currentUser=null;
+  showScreen('login-screen');
+  const chip=$('user-chip'); if(chip) chip.style.display='none';
+}
+
+/* ── User menu ── */
+function showUserMenu(){
+  if(!currentUser) return;
+  const isGoogle=!currentUser.isGuest;
+  showModal(
+    '👤 حسابك',
+    `الاسم: ${currentUser.name}${currentUser.email?'\nالإيميل: '+currentUser.email:'\n(دخول كضيف)'}`,
+    [
+      isGoogle?null:{label:'🔗 ربط بحساب Google',cb:()=>{closeModal();loginWithGoogle();}},
+      {label:'🚪 تسجيل الخروج',cb:logout}
+    ].filter(Boolean)
+  );
+}
+
+/* ── Init Firebase on page load (to check existing session) ── */
+window.addEventListener('DOMContentLoaded', ()=>{
+  initFirebase();
+});
+
 
 /* ── TAB SWITCHING ── */
 function switchTab(mode){
@@ -1185,7 +1359,7 @@ function uid(){return Math.random().toString(36).slice(2,10);}
 
 /* ── CREATE ROOM ── */
 async function createRoom(){
-  const name=$('on-name').value.trim()||'المضيف';
+  const name=(currentUser?.name)||$('on-name').value.trim()||'المضيف';
   if(!initFirebase()){showFBError();return;}
   myPlayerId=uid(); isHost=true; myPlayerIndex=0;
   const code=genCode();
@@ -1237,7 +1411,7 @@ function updateWaitingUI(players, code){
 
 /* ── JOIN ROOM ── */
 async function joinRoom(){
-  const name=$('join-name').value.trim()||'لاعب';
+  const name=(currentUser?.name)||$('join-name').value.trim()||'لاعب';
   const code=$('join-code').value.trim();
   if(code.length!==4){$('join-status').textContent='❌ الكود لازم يكون 4 أرقام';return;}
   if(!initFirebase()){showFBError();return;}
