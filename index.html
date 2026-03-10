@@ -285,8 +285,8 @@ h1.logo{
   position:fixed;inset:0;
   background:var(--bg);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:1rem;z-index:1000;
-  transition:opacity .6s ease;
+  gap:1rem;z-index:900;
+  transition:opacity .5s ease;
 }
 #splash.hidden{opacity:0;pointer-events:none;}
 .splash-logo{font-family:'Amiri',serif;font-size:5rem;font-weight:700;color:var(--gold);text-shadow:0 0 40px rgba(212,175,55,.7);animation:splashPulse 1.5s ease-in-out infinite;}
@@ -1373,6 +1373,124 @@ function showFBError(){
     [{label:'العب ضد الكمبيوتر',cb:()=>{closeModal();switchTab('local');}}]
   );
 }
+
+/* ════════════════════════════════
+   PWA — Splash + Manifest + Service Worker + Install
+════════════════════════════════ */
+
+function hideSplash(){
+  const sp=document.getElementById('splash');
+  if(!sp) return;
+  sp.style.transition='opacity .5s ease';
+  sp.style.opacity='0';
+  sp.style.pointerEvents='none';
+  setTimeout(()=>{ try{sp.parentNode.removeChild(sp);}catch(e){} }, 600);
+}
+
+// إخفاء الـ splash بعد ثانيتين بالظبط — مفيش انتظار لأي حاجة
+setTimeout(hideSplash, 2000);
+// نسخة احتياطية لو أي حاجة اتأخرت
+window.addEventListener('load', ()=>setTimeout(hideSplash, 500));
+document.addEventListener('DOMContentLoaded', ()=>setTimeout(hideSplash, 2000));
+
+// ── Generate icon via canvas ──
+function makeIcon(size){
+  try{
+    const c=document.createElement('canvas');
+    c.width=c.height=size;
+    const ctx=c.getContext('2d');
+    const bg=ctx.createRadialGradient(size/2,size/2,0,size/2,size/2,size/2);
+    bg.addColorStop(0,'#2A1200');bg.addColorStop(1,'#070200');
+    ctx.fillStyle=bg;ctx.fillRect(0,0,size,size);
+    ctx.strokeStyle='#D4AF37';ctx.lineWidth=size*.04;
+    ctx.beginPath();ctx.arc(size/2,size/2,size*.44,0,Math.PI*2);ctx.stroke();
+    ctx.fillStyle='#D4AF37';
+    ctx.font=`bold ${size*.42}px serif`;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.shadowColor='rgba(212,175,55,.8)';ctx.shadowBlur=size*.1;
+    ctx.fillText('ف',size/2,size/2);
+    return c.toDataURL('image/png');
+  }catch(e){ return ''; }
+}
+
+// ── Inline Manifest ──
+try{
+  const icon192=makeIcon(192), icon512=makeIcon(512), icon72=makeIcon(72);
+  const manifest={
+    name:'الفرح — لعبة الكروت',short_name:'الفرح',
+    description:'لعبة كروت مصرية للأفراح',
+    start_url:'./',display:'standalone',orientation:'portrait',
+    background_color:'#070200',theme_color:'#D4AF37',lang:'ar',dir:'rtl',
+    categories:['games'],
+    icons:[
+      {src:icon72,sizes:'72x72',type:'image/png',purpose:'any maskable'},
+      {src:icon192,sizes:'192x192',type:'image/png',purpose:'any maskable'},
+      {src:icon512,sizes:'512x512',type:'image/png',purpose:'any maskable'}
+    ]
+  };
+  const mBlob=new Blob([JSON.stringify(manifest)],{type:'application/json'});
+  const mEl=document.getElementById('pwa-manifest');
+  if(mEl) mEl.href=URL.createObjectURL(mBlob);
+  const iEl=document.getElementById('pwa-icon');
+  if(iEl && icon192) iEl.href=icon192;
+}catch(e){}
+
+// ── Service Worker ──
+if('serviceWorker' in navigator){
+  try{
+    const sw=`
+const V='farah-v2';
+self.addEventListener('install',e=>{self.skipWaiting();});
+self.addEventListener('activate',e=>{
+  e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==V).map(k=>caches.delete(k)))));
+  self.clients.claim();
+});
+self.addEventListener('fetch',e=>{
+  if(e.request.method!=='GET')return;
+  e.respondWith(
+    caches.open(V).then(c=>
+      c.match(e.request).then(r=>r||fetch(e.request).then(nr=>{
+        c.put(e.request,nr.clone());return nr;
+      }))
+    ).catch(()=>caches.match('./'))
+  );
+});`;
+    const swBlob=new Blob([sw],{type:'application/javascript'});
+    navigator.serviceWorker.register(URL.createObjectURL(swBlob),{scope:'./'});
+  }catch(e){}
+}
+
+// ── Install prompt ──
+let deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();deferredPrompt=e;
+  setTimeout(()=>{
+    const b=document.getElementById('install-banner');
+    if(b&&localStorage.getItem('pwa-dismissed')!=='1') b.classList.add('show');
+  },4000);
+});
+window.addEventListener('appinstalled',()=>{ dismissInstall(); toast('🎊 تم تثبيت اللعبة!'); });
+
+function installPWA(){
+  if(deferredPrompt){
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(r=>{ if(r.outcome==='accepted') toast('🎊 جاري التثبيت…'); deferredPrompt=null; });
+  }else{
+    showModal('📲 كيف تثبّت اللعبة',
+      'على أندرويد / كروم:\n١. اضغط ⋮ (القائمة)\n٢. اختار "تثبيت التطبيق"\n\nعلى آيفون / سفاري:\n١. اضغط زر المشاركة ⬆️\n٢. اختار "إضافة للشاشة الرئيسية"',
+      [{label:'تمام ✓',cb:closeModal}]);
+  }
+  dismissInstall();
+}
+function dismissInstall(){
+  const b=document.getElementById('install-banner');
+  if(b){ b.classList.remove('show'); }
+  localStorage.setItem('pwa-dismissed','1');
+}
+
+// ── Prevent pull-to-refresh & context menu ──
+document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault();},{passive:false});
+document.addEventListener('contextmenu',e=>e.preventDefault());
 </script>
 
 <!-- SPLASH SCREEN -->
