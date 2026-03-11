@@ -50,6 +50,49 @@ body::after{
 .screen{display:none;position:relative;z-index:1;width:100%;height:100%;flex-direction:column;align-items:center;justify-content:center;}
 .screen.active{display:flex;}
 
+.rounds-picker{display:flex;gap:.5rem;justify-content:center;}
+.rnd-btn{
+  flex:1;background:rgba(212,175,55,.08);border:1px solid rgba(212,175,55,.2);
+  border-radius:10px;padding:.5rem .3rem;color:rgba(255,248,231,.6);
+  font-family:'Cairo',sans-serif;font-size:.82rem;font-weight:600;cursor:pointer;
+  transition:all .2s;
+}
+.rnd-btn.active{
+  background:linear-gradient(135deg,rgba(212,175,55,.25),rgba(212,175,55,.12));
+  border-color:rgba(212,175,55,.6);color:var(--gold-l);
+  box-shadow:0 0 12px rgba(212,175,55,.2);
+}
+.rnd-btn:hover:not(.active){border-color:rgba(212,175,55,.4);color:var(--cream);}
+
+.rounds-progress{
+  display:flex;gap:.4rem;align-items:center;justify-content:center;
+  margin:.5rem 0;flex-wrap:wrap;
+}
+.rnd-dot{
+  width:28px;height:28px;border-radius:50%;border:2px solid rgba(212,175,55,.3);
+  display:flex;align-items:center;justify-content:center;
+  font-size:.65rem;font-weight:700;color:rgba(255,248,231,.4);
+  transition:all .3s;position:relative;
+}
+.rnd-dot.done-win{
+  background:linear-gradient(135deg,var(--gold-d),var(--gold));
+  border-color:var(--gold);color:var(--dark);
+}
+.rnd-dot.done-lose{background:rgba(139,26,26,.4);border-color:rgba(139,26,26,.6);color:rgba(255,255,255,.5);}
+.rnd-dot.current{border-color:var(--gold);color:var(--gold);animation:pulseDot .9s ease-in-out infinite;}
+@keyframes pulseDot{0%,100%{box-shadow:0 0 0 0 rgba(212,175,55,.4);}50%{box-shadow:0 0 0 6px rgba(212,175,55,0);}}
+
+.total-scores{
+  background:rgba(212,175,55,.06);border:1px solid rgba(212,175,55,.15);
+  border-radius:12px;padding:.7rem 1rem;width:100%;max-width:320px;margin-top:.4rem;
+}
+.total-scores-title{font-size:.7rem;color:var(--gold);letter-spacing:2px;text-align:center;margin-bottom:.4rem;}
+.tscore-row{display:flex;justify-content:space-between;align-items:center;padding:.22rem 0;font-size:.82rem;}
+.tscore-row .ts-name{color:rgba(255,248,231,.8);}
+.tscore-row .ts-pts{color:var(--gold-l);font-weight:700;}
+.tscore-row.leader .ts-name{color:var(--gold-l);}
+.tscore-row.leader .ts-pts{color:var(--gold);}
+
 /* ── TITLE ── */
 #title-screen{gap:.7rem;padding:1.4rem;overflow-y:auto;}
 .zaffa-banner{
@@ -360,17 +403,26 @@ h1.logo{
   <!-- LOCAL MODE -->
   <div id="panel-local">
     <div class="setup-box">
-      <h3>🎮 أسماء اللاعبين (اللاعب الأول أنت)</h3>
-      <div class="p-row"><span>🎩</span><input id="n0" value="أنت" placeholder="اسمك"></div>
-      <div class="p-row"><span>🌹</span><input id="n1" value="سارة" placeholder="لاعب ٢ (AI)"></div>
-      <div class="p-row"><span>🎭</span><input id="n2" value="محمد" placeholder="لاعب ٣ (AI)"></div>
-      <div class="p-row"><span>🎊</span><input id="n3" value="فاطمة" placeholder="لاعب ٤ (AI)"></div>
+      <h3>✍️ اكتب اسمك</h3>
+      <div class="p-row"><span>🎩</span><input id="n0" value="" placeholder="اسمك هنا…" maxlength="20" autofocus></div>
+      <div style="font-size:.68rem;color:rgba(255,248,231,.35);text-align:center;margin-top:.3rem;line-height:1.6;">
+        🎯 اجمع: العريس + العروسة + المأذون + الشهود<br>
+        وقول <strong style="color:var(--gold-l)">قولولي مبروك!</strong> لتفوز
+      </div>
+      <div style="margin-top:.9rem;">
+        <div style="font-size:.75rem;color:var(--gold);text-align:center;margin-bottom:.45rem;letter-spacing:1px;">عدد الأدوار</div>
+        <div class="rounds-picker" id="rounds-picker">
+          <button class="rnd-btn" onclick="pickRounds(3)">٣ أدوار</button>
+          <button class="rnd-btn active" onclick="pickRounds(5)">٥ أدوار</button>
+          <button class="rnd-btn" onclick="pickRounds(7)">٧ أدوار</button>
+        </div>
+      </div>
     </div>
     <button class="btn-big" style="margin-top:.7rem" onclick="startGame()">ابدأ الفرح! 🎉</button>
   </div>
 
   <!-- ONLINE MODE -->
-  <div id="panel-online" style="display:none;width:100%;max-width:360px;display:none;flex-direction:column;align-items:center;gap:.6rem;">
+  <div id="panel-online" style="display:none;width:100%;max-width:360px;flex-direction:column;align-items:center;gap:.6rem;">
 
     <!-- Sub-tabs: Create / Join -->
     <div class="mode-tabs" style="margin-bottom:0">
@@ -381,7 +433,7 @@ h1.logo{
     <!-- CREATE ROOM -->
     <div id="panel-create" class="online-box">
       <h3>إنشاء غرفة جديدة</h3>
-      <div class="p-row"><span>🎩</span><input id="on-name" value="أنت" placeholder="اسمك"></div>
+      <div class="p-row"><span>🎩</span><input id="on-name" value="" placeholder="اسمك (المضيف)" maxlength="20"></div>
       <button class="btn-big" style="padding:.7rem" onclick="createRoom()">إنشاء الغرفة 🎲</button>
 
       <!-- After room created -->
@@ -401,7 +453,7 @@ h1.logo{
     <!-- JOIN ROOM -->
     <div id="panel-join" class="online-box" style="display:none">
       <h3>انضم لغرفة</h3>
-      <div class="p-row"><span>🎩</span><input id="join-name" value="أنا" placeholder="اسمك"></div>
+      <div class="p-row"><span>🎩</span><input id="join-name" value="" placeholder="اسمك" maxlength="20"></div>
       <div class="p-row"><span>🔑</span><input id="join-code" placeholder="كود الغرفة (4 أرقام)" maxlength="4" style="text-align:center;font-size:1.2rem;letter-spacing:.2em;font-weight:700"></div>
       <button class="btn-big" style="padding:.7rem" onclick="joinRoom()">انضم! 🎉</button>
       <div class="status-lbl" id="join-status"></div>
@@ -457,7 +509,7 @@ h1.logo{
     <div class="action-panel">
       <button class="btn-sm btn-draw"  id="btn-draw"     onclick="onDeckClick()">🎴 اسحب كارت</button>
       <button class="btn-sm btn-swap"  id="btn-swap-dis" onclick="onDiscardClick()" disabled>🔄 بدّل مع المرمية</button>
-      <button class="btn-sm btn-call"  id="btn-call"     onclick="callEnd()">📢 أعلن الفرح</button>
+      <button class="btn-sm btn-call"  id="btn-call"     onclick="callEnd()">🎊 قولولي مبروك!</button>
     </div>
     <div class="my-section">
       <div class="my-head">
@@ -473,11 +525,15 @@ h1.logo{
 
 <!-- WIN -->
 <div id="win-screen" class="screen">
-  <div class="win-icon">🎊</div>
+  <div class="win-icon" id="win-icon">🎊</div>
   <div class="win-h1" id="win-h1">مبروك!</div>
   <p style="color:rgba(255,248,231,.6);font-size:.87rem;text-align:center;max-width:300px" id="win-sub"></p>
+  <div class="rounds-progress" id="rounds-progress"></div>
   <div class="score-board" id="score-board"></div>
-  <button class="btn-big" style="max-width:270px;margin-top:1rem" onclick="location.reload()">العب مرة ثانية 🔄</button>
+  <div style="display:flex;gap:.7rem;margin-top:1rem;width:100%;max-width:320px">
+    <button class="btn-big" id="btn-next-round" style="flex:1" onclick="nextRound()">الدور التالي ▶</button>
+    <button class="btn-big" style="flex:0 0 auto;padding:.85rem 1rem;background:rgba(212,175,55,.15);color:var(--gold);box-shadow:none;border:1px solid rgba(212,175,55,.3)" onclick="location.reload()">🔄</button>
+  </div>
 </div>
 
 <!-- MODAL -->
@@ -499,30 +555,53 @@ function enforceHand(player){
 }
 
 /* ─── CARD DATA ─── */
+// الكروت الأساسية (الفرح): عريس×3 عروسة×3 مأذون×2 شهود×2
+// الخاص: ابن خال العروسة×1
+// الدفاع: فتوة×4
+// الأكشن: حماك×6 قايمة×3 مصوراتي×3 فرح باظ×2 نم المعازيم×4 حماتك×5 كربوعة×4 مفيش مبروك×2 فرقة وصلت×2 عين×1
+// الإجمالي = 3+3+2+2+1+4+6+3+3+2+4+5+4+2+2+1 = 47
+
 const CARDS=[
-  {id:'groom',    name:'العريس',         emoji:'🤵',pts:25, theme:'t-groom',    kind:'wedding',desc:'الكنز الأكبر'},
-  {id:'bride',    name:'العروسة',        emoji:'👰',pts:20, theme:'t-bride',    kind:'wedding',desc:'جوهرة الفرح'},
-  {id:'mazoun',   name:'المأذون',        emoji:'📜',pts:15, theme:'t-mazoun',   kind:'wedding',desc:'يكمل الفرح'},
-  {id:'witnesses',name:'الشهود',         emoji:'👥',pts:10, theme:'t-witnesses',kind:'wedding',desc:'يشهدون الفرح'},
-  {id:'bad_party',name:'الفرح باظ',      emoji:'💔',pts:0,  theme:'t-bad',      kind:'rotate', desc:'كل لاعب يمرر أوراقه اليمني'},
-  {id:'futwa',    name:'الفتوة',         emoji:'💪',pts:5,  theme:'t-defense',  kind:'defense',desc:'امنع أي إجراء ضدك (+5)'},
-  {id:'mazumin',  name:'نم المعازيم',    emoji:'🚪',pts:0,  theme:'t-action',   kind:'replace',desc:'ارمِ ورقة واسحب جديدة'},
-  {id:'no_mabrook',name:'مفيش مبروك',   emoji:'👏',pts:0,  theme:'t-special',  kind:'slowclap',desc:'آخر واحد يصفق يخسر ورقة'},
-  {id:'mabrook',  name:'مبروك للجميع',  emoji:'🎁',pts:0,  theme:'t-special',  kind:'refresh',desc:'اختر لاعب يسحب ٤ كروت جديدة'},
-  {id:'ibn_khal', name:'ابن خال العروسة',emoji:'🦊',pts:15,theme:'t-steal',    kind:'steal',  desc:'اسرق الفوز من المكتمل (+15)'},
-  {id:'hamak',    name:'حماك',           emoji:'👀',pts:-5, theme:'t-neg',      kind:'peek',   desc:'شوف ٢ من يدك أو ١ من لاعب (-5)'},
-  {id:'hamatek',  name:'حماتك',          emoji:'🔄',pts:0,  theme:'t-action',   kind:'swap1',  desc:'بدّل ورقة منك بورقة لاعب آخر'},
-  {id:'mussawer', name:'المصوراتي',      emoji:'📸',pts:0,  theme:'t-action',   kind:'spy',    desc:'شوف ورقة من كل لاعب وبدّل'},
-  {id:'harba2',   name:'الحرباوية',      emoji:'🦎',pts:0,  theme:'t-action',   kind:'swap2',  desc:'بدّل كارت بين لاعبين'},
+  // ── كروت الفرح (اجمعهم تفوز!) ──
+  {id:'groom',     name:'العريس',            emoji:'🤵',pts:0, theme:'t-groom',    kind:'wedding',    desc:'اجمع الأربعة وقول: قولولي مبروك!'},
+  {id:'bride',     name:'العروسة',           emoji:'👰',pts:0, theme:'t-bride',    kind:'wedding',    desc:'اجمع الأربعة وقول: قولولي مبروك!'},
+  {id:'mazoun',    name:'المأذون',           emoji:'📜',pts:0, theme:'t-mazoun',   kind:'wedding',    desc:'اجمع الأربعة وقول: قولولي مبروك!'},
+  {id:'witnesses', name:'الشهود',            emoji:'👥',pts:0, theme:'t-witnesses',kind:'wedding',    desc:'اجمع الأربعة وقول: قولولي مبروك!'},
+  // ── الخاص ──
+  {id:'ibn_khal',  name:'ابن خال العروسة',  emoji:'🦊',pts:0, theme:'t-steal',    kind:'steal',      desc:'اخطف الفوز من اللي قال قولولي مبروك!'},
+  // ── الدفاع ──
+  {id:'futwa',     name:'الفتوة',            emoji:'💪',pts:0, theme:'t-defense',  kind:'defense',    desc:'ألغي أي أكشن ضدك — أنت تقرر'},
+  // ── الأكشن ──
+  {id:'hamak',     name:'حماك',              emoji:'👀',pts:0, theme:'t-action',   kind:'peek',       desc:'شوف كارتين من يدك أو كارت من أي لاعب'},
+  {id:'qayma',     name:'القايمة',           emoji:'📋',pts:0, theme:'t-action',   kind:'skip',       desc:'وقف دور اللاعب اللي بعدك'},
+  {id:'mussawer',  name:'المصوراتي',         emoji:'📸',pts:0, theme:'t-action',   kind:'spy',        desc:'شوف كارت من كل لاعب واختار تاخد واحد'},
+  {id:'bad_party', name:'الفرح باظ',         emoji:'💔',pts:0, theme:'t-bad',      kind:'rotate',     desc:'الكارت الأيمن بيتبدل بين كل اللاعبين'},
+  {id:'mazumin',   name:'نم المعازيم',       emoji:'🚪',pts:0, theme:'t-action',   kind:'replace',    desc:'انزل كارت من يدك واسحب واحد جديد بدله'},
+  {id:'hamatek',   name:'حماتك',             emoji:'🔄',pts:0, theme:'t-action',   kind:'swap1',      desc:'بادل كارت من عندك بكارت من أي لاعب'},
+  {id:'harba2',    name:'الحربوءة',          emoji:'🦎',pts:0, theme:'t-action',   kind:'swap2',      desc:'بادل كارت بين أي لاعبين من اختيارك'},
+  {id:'no_mabrook',name:'مفيش مبروك',        emoji:'🚫',pts:0, theme:'t-special',  kind:'reshuffle',  desc:'اختار لاعب — يرمي ورقه ويسحب ٤ جداد'},
+  {id:'farqa',     name:'الفرقة وصلت',       emoji:'🥁',pts:0, theme:'t-special',  kind:'slowclap',   desc:'الكل يصفق — آخر واحد يرمي كارت ويسحب'},
+  {id:'ain',       name:'العين دخلت الفرح',  emoji:'👁️',pts:0, theme:'t-special',  kind:'reveal',     desc:'كل اللاعبين يكشفون كروتهم!'},
 ];
 
-const ACTION_KINDS=['rotate','replace','slowclap','refresh','peek','swap1','spy','swap2'];
-// 'steal'(ibn_khal) and 'defense'(futwa) are NOT in ACTION_KINDS — they stay in hand as keep cards
+// الأكشن اللي بتتنفذ فور السحب من الكوتشينة
+const ACTION_KINDS=['rotate','replace','peek','swap1','spy','swap2','skip','reshuffle','slowclap','reveal'];
+// 'steal' و 'defense' بيفضلوا في اليد كورق سلبي
 
 /* ─── STATE ─── */
 let G={};
 let roundNum=1;
 let peekTick=null;
+let TOTAL_ROUNDS=5;           // يتحدد قبل البدء: 3 أو 5 أو 7
+let CURRENT_MATCH_ROUND=1;    // رقم الدور الحالي في المباراة
+let MATCH_SCORES=[];          // مجموع نقاط كل لاعب عبر الأدوار
+let PLAYER_NAMES=[];          // اسماء اللاعبين تتحفظ بين الأدوار
+
+function pickRounds(n){
+  TOTAL_ROUNDS=n;
+  document.querySelectorAll('.rnd-btn').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+}
 
 /* ─── HELPERS ─── */
 const $=id=>document.getElementById(id);
@@ -535,18 +614,20 @@ function toast(msg,type=''){const o=document.querySelector('.toast');if(o)o.remo
 function confetti(){const cols=['#D4AF37','#FF6B6B','#4ECDC4','#45B7D1','#96CEB4','#FFEAA7','#DDA0DD'];for(let i=0;i<65;i++)setTimeout(()=>{const e=document.createElement('div');e.className='conf';e.style.cssText=`left:${Math.random()*100}vw;top:-20px;background:${cols[0|Math.random()*cols.length]};width:${6+Math.random()*10}px;height:${6+Math.random()*10}px;border-radius:${Math.random()>.5?'50%':'2px'};animation-duration:${2+Math.random()*3}s;animation-delay:${Math.random()*.6}s;`;document.body.appendChild(e);setTimeout(()=>e.remove(),5000);},i*28);}
 
 /* ─── BUILD DECK ─── */
+// Total: 3+3+2+2+1 + 4+6+3+3+2+4+5+4+2+2+1 = 47 cards
 function buildDeck(){
   let d=[];
-  // Wedding cards — specific counts per rules
-  const weddingCounts={groom:3, bride:3, mazoun:2, witnesses:1};
-  Object.entries(weddingCounts).forEach(([id,n])=>{
+  // الأعداد الرسمية للكروت:
+  const counts={
+    groom:3, bride:3, mazoun:2, witnesses:2,  // كروت الفرح
+    ibn_khal:1,                                // ابن خال العروسة
+    futwa:4,                                   // الفتوة
+    hamak:6, qayma:3, mussawer:3,             // أكشن
+    bad_party:2, mazumin:4, hamatek:5,
+    harba2:4, no_mabrook:2, farqa:2, ain:1
+  };
+  Object.entries(counts).forEach(([id,n])=>{
     for(let i=0;i<n;i++) d.push({...cardDef(id)});
-  });
-  // ibn_khal: exactly 1
-  d.push({...cardDef('ibn_khal')});
-  // All other action cards: exactly 4 each
-  ['bad_party','futwa','mazumin','no_mabrook','mabrook','hamak','hamatek','mussawer','harba2'].forEach(id=>{
-    for(let i=0;i<4;i++) d.push({...cardDef(id)});
   });
   return shuffle(d);
 }
@@ -579,20 +660,36 @@ function mkCard(c,revealed,clickFn){
 
 /* ─── START ─── */
 function startGame(){
-  const names=[0,1,2,3].map(i=>{
-    const v=$('n'+i).value.trim();
-    if(i===0) return v||(currentUser?.name)||'أنت';
-    return v||`لاعب ${i+1}`;
-  });
+  const myName=($('n0')?.value?.trim())||(currentUser?.name)||'';
+  if(!myName){toast('اكتب اسمك الأول! 😊','warn');$('n0')?.focus();return;}
+  const aiPool=['سارة','محمد','فاطمة','كريم','منى','أحمد','نورا','علي'];
+  shuffle(aiPool);
+  PLAYER_NAMES=[myName, aiPool[0], aiPool[1], aiPool[2]];
+  CURRENT_MATCH_ROUND=1;
+  MATCH_SCORES=PLAYER_NAMES.map(()=>0);
+  startRound();
+}
+
+function startRound(){
   G={
-    players:names.map((name,i)=>({name,hand:[],score:0,isHuman:i===0,protected:false})),
+    players:PLAYER_NAMES.map((name,i)=>({name,hand:[],score:0,isHuman:i===0,protected:false})),
     deck:buildDeck(),discard:[],
     current:0,phase:'idle',over:false,
     calledEnd:false,endBy:-1,lastRound:false,turnsAfterCall:0,
+    skipNext:false,
   };
   G.players.forEach(p=>{for(let i=0;i<4;i++)if(G.deck.length>0)p.hand.push(G.deck.pop());});
   roundNum=1;
   showPeek();
+}
+
+function nextRound(){
+  if(CURRENT_MATCH_ROUND>=TOTAL_ROUNDS){
+    showFinalWinner();
+  }else{
+    CURRENT_MATCH_ROUND++;
+    startRound();
+  }
 }
 
 /* ─── PEEK PHASE ─── */
@@ -737,11 +834,30 @@ function onDiscardClick(){
 
 /* ─── CALL END ─── */
 function callEnd(){
-  if(G.current!==0||G.phase!=='my-turn')return;
-  G.calledEnd=true;G.endBy=0;G.phase='idle';
-  log(`📢 ${G.players[0].name} أعلن الفرح!`,'hl');
-  toast('📢 أعلنت الفرح!\nباقي اللاعبين جولة أخيرة...');
-  nextTurn();
+  if(G.current!==0 || G.phase!=='my-turn') return;
+  const me = G.players[0];
+
+  if(hasWeddingSet(me.hand)){
+    // 🎊 عنده الكروت الأربعة — يعلن الفوز (ابن خال من لاعب تاني مش بيشتغل هنا)
+    announceWin(0);
+  } else {
+    // مش عنده الكروت — يعرض عليه يعلن نهاية الجولة
+    const missing = ['groom','bride','mazoun','witnesses']
+      .filter(id=>!me.hand.some(c=>c.id===id))
+      .map(id=>({groom:'العريس 🤵',bride:'العروسة 👰',mazoun:'المأذون 📜',witnesses:'الشهود 👥'}[id]))
+      .join('، ');
+    showModal('🎊 قولولي مبروك!',
+      `ناقصك: ${missing}\n\nمحتاج الكروت الأربعة عشان تفوز.\nعايز تعلن نهاية الجولة وأقل لاعبين يفوز؟`,
+      [{label:'📢 أعلن نهاية الجولة', cb:()=>{
+        closeModal();
+        G.calledEnd=true; G.endBy=0; G.phase='idle';
+        log(`📢 ${me.name} أعلن نهاية الجولة!`,'hl');
+        toast('📢 أعلنت نهاية الجولة!\nباقي اللاعبين جولة أخيرة...');
+        nextTurn();
+      }},
+      {label:'لأ، كمّل اللعب', cb:closeModal}]
+    );
+  }
 }
 
 /* ─── PLAY FUTWA FROM HAND ─── */
@@ -790,21 +906,105 @@ function executeAction(c,pIdx){
   const p=G.players[pIdx];const isMe=pIdx===0;
   log(`${p.name} نفّذ "${c.name}" ${c.emoji}`,'hl');
   G.discard.push(c);
-
   const done=()=>{checkWedding(pIdx);if(!G.over){if(isMe)endTurn();else setTimeout(aiNextTurn,600);}};
+  const others=G.players.filter((_,i)=>i!==pIdx);
+  const humans=G.players.filter((_,i)=>i===0);
 
   switch(c.kind){
-    case 'defense':
-      p.score+=c.pts;p.protected=true;
-      toast(`${p.name} لعب الفتوة 💪 محمي الآن! (+5 نقطة)`);
-      setTimeout(()=>{p.protected=false;},6000);
+
+    // ── حماك: شوف كارتين من يدك أو ١ من لاعب ──
+    case 'peek':
+      if(isMe){
+        const myOpts=p.hand.map((cc,i)=>({label:`👁️ كارت رقم ${i+1} من يدي`,cb:()=>{
+          closeModal();
+          showModal('حماك 👀',`كارتك رقم ${i+1}:\n${cc.name} ${cc.emoji}`,
+            [{label:'شفت ✓',cb:()=>{
+              // offer see second card
+              const rest=p.hand.filter((_,j)=>j!==i);
+              if(rest.length>0){
+                showModal('حماك 👀 — الكارت التاني',rest.map((cc2,j)=>`كارت رقم ${j>=i?j+2:j+1}: ${cc2.name} ${cc2.emoji}`).join('\n'),
+                  [{label:'تمام ✓',cb:()=>{closeModal();endTurn();}}]);
+              }else{closeModal();endTurn();}
+            }}]);
+          log(`${p.name} شاف ٢ كروت من يده`);
+        }}));
+        const oppOpts=others.map(pl=>({label:`👁️ كارت من ${pl.name}`,cb:()=>{
+          closeModal();
+          const pos=Math.floor(Math.random()*pl.hand.length);
+          const seen=pl.hand[pos];
+          showModal('حماك 👀',`${pl.name}: ${seen.name} ${seen.emoji}`,
+            [{label:'تمام ✓',cb:()=>{closeModal();endTurn();}}]);
+          log(`${p.name} شاف كارت من ${pl.name}`);
+        }}));
+        showModal('حماك 👀','شوف كارتين من يدك أو ١ من لاعب:',[...myOpts,...oppOpts]);
+      }else{done();}
+      break;
+
+    // ── القايمة: وقف دور اللي بعدك ──
+    case 'skip':
+      G.skipNext=true;
+      toast(`📋 ${p.name} لعب القايمة — دور اللي بعده هيتخطى!`);
+      log(`${p.name} لعب القايمة — الدور التالي هيتوقف`,'hl');
       done();break;
 
+    // ── المصوراتي: شوف كارت من كل لاعب وتاخد اللي يعجبك ──
+    case 'spy':
+      if(isMe){
+        // collect one visible card from each opponent
+        const peeks=others.filter(pl=>pl.hand.length>0).map(pl=>{
+          const idx=Math.floor(Math.random()*pl.hand.length);
+          return {pl,idx,card:pl.hand[idx]};
+        });
+        if(peeks.length===0){done();break;}
+        const info=peeks.map(({pl,card})=>`${pl.name}: ${card.name} ${card.emoji}`).join('\n');
+        showModal('المصوراتي 📸',`شفت الكروت دي:\n\n${info}\n\nتاخد منهم؟`,
+          [...peeks.map(({pl,card,idx})=>({
+            label:`آخد "${card.name}" من ${pl.name}`,
+            cb:()=>{
+              closeModal();
+              // choose which of my cards to give
+              showModal('المصوراتي 📸',`اختار كارت من يدك تديه لـ${pl.name}:`,
+                p.hand.map((_,mi)=>({label:`كارتي رقم ${mi+1}`,cb:()=>{
+                  const myCard=p.hand.splice(mi,1)[0];
+                  const theirCard=pl.hand.splice(idx,1)[0];
+                  p.hand.splice(mi,0,theirCard);
+                  pl.hand.splice(idx,0,myCard);
+                  enforceHand(p);enforceHand(pl);
+                  log(`${p.name} أخد "${theirCard.name}" من ${pl.name} وديه "${myCard.name}"`,'hl');
+                  closeModal();endTurn();
+                }})),null,true);
+            }
+          })),
+          {label:'مش هاخد حاجة',cb:()=>{closeModal();endTurn();}}
+        ]);
+      }else{
+        const doSpy=()=>{
+          if(G.players[0].hand.length>0&&p.hand.length>0){
+            const theirIdx=Math.floor(Math.random()*G.players[0].hand.length);
+            const theirCard=G.players[0].hand[theirIdx];
+            let worstIdx=0;
+            p.hand.forEach((cc,i)=>{if(cc.kind==='wedding'&&theirCard.kind!=='wedding')worstIdx=i;});
+            const myCard=p.hand.splice(worstIdx,1)[0];
+            const tc=G.players[0].hand.splice(theirIdx,1)[0];
+            p.hand.splice(worstIdx,0,tc);G.players[0].hand.splice(theirIdx,0,myCard);
+            enforceHand(p);enforceHand(G.players[0]);
+            log(`${p.name} استخدم المصوراتي وبدّل مع ${G.players[0].name}`);
+          }
+          renderGame();setTimeout(aiNextTurn,400);
+        };
+        tryFutwa(c,pIdx,doSpy);
+      }
+      break;
+
+    // ── الفرح باظ: الكل يبدل كارته الأيمن مع التاني ──
     case 'rotate':
-      {const t=G.players[3].hand;G.players[3].hand=G.players[2].hand;G.players[2].hand=G.players[1].hand;G.players[1].hand=G.players[0].hand;G.players[0].hand=t;}
-      toast('💔 الفرح باظ!\nكل لاعب مرر أوراقه لليمين');
+      {const n=G.players.length;const tmp=G.players[n-1].hand.slice();
+       for(let i=n-1;i>0;i--)G.players[i].hand=G.players[i-1].hand.slice();
+       G.players[0].hand=tmp;}
+      toast('💔 الفرح باظ!\nكل لاعب مرر أوراقه لليمين!');
       renderGame();done();break;
 
+    // ── نم المعازيم: انزل كارت من يدك واسحب غيره ──
     case 'replace':
       if(isMe){
         showModal('نم المعازيم 🚪','اختار كارت من يدك ترميه وتسحب بديله:',
@@ -817,102 +1017,34 @@ function executeAction(c,pIdx){
             closeModal();endTurn();
           }})));
       }else{
-        if(p.hand.length>0){
-          const old=p.hand.splice(0,1)[0];G.discard.push(old);
-          refillDeckIfEmpty();
-          if(G.deck.length>0)p.hand.splice(0,0,G.deck.pop());
-        }
+        const ri=Math.floor(Math.random()*p.hand.length);
+        const old=p.hand.splice(ri,1)[0];G.discard.push(old);
+        refillDeckIfEmpty();
+        if(G.deck.length>0)p.hand.splice(ri,0,G.deck.pop());
         enforceHand(p);done();
       }
       break;
 
-    case 'slowclap':
-      if(isMe){
-        toast('👏 مفيش مبروك! صفق بسرعة!');
-        showModal('مفيش مبروك 👏','الجميع لازم يصفق!\nهل صفقت قبل الخصوم؟',
-          [{label:'👏 صفقت أنا الأول!',cb:()=>{aiLoseCard();closeModal();endTurn();}},
-           {label:'😅 أنا كنت آخر واحد',cb:()=>{
-             const old=p.hand.length>0?p.hand.splice(0,1)[0]:null;
-             if(old)G.discard.push(old);
-             enforceHand(p);
-             log(`${p.name} آخر واحد صفق — رمى ورقة`,'warn');closeModal();endTurn();
-           }}]);
-      }else{aiLoseCard();done();}
-      break;
-
-    case 'refresh':
-      if(isMe){
-        showModal('مبروك للجميع 🎁','اختار لاعب يرمي أوراقه ويسحب ٤ جديدة:',
-          G.players.filter((_,i)=>i!==0).map(pl=>({label:pl.name,cb:()=>{
-            pl.hand.forEach(cc=>G.discard.push(cc));pl.hand=[];
-            for(let i=0;i<4;i++)if(G.deck.length>0)pl.hand.push(G.deck.pop());
-            enforceHand(pl);
-            log(`${p.name} أعطى ${pl.name} بداية جديدة بـ٤ كروت`);
-            closeModal();endTurn();
-          }})));
-      }else{
-        const doRefresh=()=>{
-          const t=G.players[0];t.hand.forEach(cc=>G.discard.push(cc));t.hand=[];
-          for(let i=0;i<4;i++)if(G.deck.length>0)t.hand.push(G.deck.pop());
-          enforceHand(t);
-          log(`${p.name} أعاد أوراق ${t.name}`);renderGame();setTimeout(aiNextTurn,400);
-        };
-        tryFutwa(c,pIdx,doRefresh);
-      }
-      break;
-
-    case 'peek':
-      if(isMe){
-        showModal('حماك 👀','اختار:',
-          [{label:'👁️ شوف أول ٢ من أوراقي',cb:()=>{
-            const shown=p.hand.slice(0,2).map((cc,i)=>`كارت رقم ${i+1}: ${cc.name} ${cc.emoji} (${cc.pts>0?'+'+cc.pts:cc.pts} نقطة)`).join('\n');
-            closeModal();
-            showModal('أوراقك 👁️',shown,[{label:'تمام ✓',cb:()=>{closeModal();endTurn();}}]);
-            log(`${p.name} شاف أول ٢ من أوراقه`);
-          }},
-          ...G.players.filter((_,i)=>i!==0).map(pl=>({label:`👁️ شوف كارت ${pl.name}`,cb:()=>{
-            const seen=pl.hand.length>0?`${pl.name}: ${pl.hand[0].name} ${pl.hand[0].emoji}`:`${pl.name}: بلا أوراق`;
-            closeModal();
-            showModal('شفت! 👁️',seen,[{label:'تمام ✓',cb:()=>{closeModal();endTurn();}}]);
-            log(`${p.name} شاف كارت من ${pl.name}`);
-          }}))]);
-      }else done();
-      break;
-
+    // ── حماتك: بدّل كارت منك بكارت من لاعب تاني ──
     case 'swap1':
       if(isMe){
-        // Step 1: choose which opponent
         showModal('حماتك 🔄','اختار لاعب تبدل معاه:',
-          G.players.filter((_,j)=>j!==0&&G.players[j].hand.length>0).map(pl=>({
-            label:pl.name,
-            cb:()=>{
-              closeModal();
-              // Step 2: choose which of THEIR cards
-              showModal('حماتك 🔄',`اختار كارت من يد ${pl.name} تاخده:`,
-                pl.hand.map((_,theirIdx)=>({
-                  label:`كارت ${pl.name} رقم ${theirIdx+1}`,
-                  cb:()=>{
-                    closeModal();
-                    // Step 3: choose which of YOUR cards to give back
-                    showModal('حماتك 🔄',`اختار كارت من يدك تديه لـ${pl.name}:`,
-                      p.hand.map((_,mi)=>({
-                        label:`كارتي رقم ${mi+1}`,
-                        cb:()=>{
-                          const myCard=p.hand.splice(mi,1)[0];
-                          const theirCard=pl.hand.splice(theirIdx,1)[0];
-                          p.hand.splice(mi,0,theirCard);
-                          pl.hand.splice(theirIdx,0,myCard);
-                          enforceHand(p);enforceHand(pl);
-                          log(`${p.name} بدّل كارت رقم ${mi+1} مع كارت ${pl.name} رقم ${theirIdx+1}`,'hl');
-                          closeModal();endTurn();
-                        }
-                      })),null,true);
-                  }
-                })),null,true);
-            }
-          })),null,true);
+          others.filter(pl=>pl.hand.length>0).map(pl=>({label:pl.name,cb:()=>{
+            closeModal();
+            showModal('حماتك 🔄',`اختار كارت من يد ${pl.name}:`,
+              pl.hand.map((_,ti)=>({label:`كارت ${pl.name} رقم ${ti+1}`,cb:()=>{
+                closeModal();
+                showModal('حماتك 🔄','اختار كارت من يدك تديه:',
+                  p.hand.map((_,mi)=>({label:`كارتي رقم ${mi+1}`,cb:()=>{
+                    const myC=p.hand.splice(mi,1)[0];const thC=pl.hand.splice(ti,1)[0];
+                    p.hand.splice(mi,0,thC);pl.hand.splice(ti,0,myC);
+                    enforceHand(p);enforceHand(pl);
+                    log(`${p.name} بدّل مع ${pl.name}`,'hl');
+                    closeModal();endTurn();
+                  }})),null,true);
+              }})),null,true);
+          }})),null,true);
       }else{
-        // AI targets player 0 — offer futwa guess first
         const doSwap1=()=>{
           if(G.players[0].hand.length>0&&p.hand.length>0){
             const a=p.hand.splice(0,1)[0];const b=G.players[0].hand.splice(0,1)[0];
@@ -926,111 +1058,152 @@ function executeAction(c,pIdx){
       }
       break;
 
-    case 'spy':
+    // ── الكربوعة: بدّل كارتين بين لاعبين من اختيارك ──
+    case 'swap2':
       if(isMe){
-        // Step 1: choose which opponent to peek at
-        showModal('المصوراتي 📸','اختار لاعب تشوف ورقة منه:',
-          G.players.filter((_,i)=>i!==pIdx&&G.players[i].hand.length>0).map(pl=>({
-            label:pl.name,
-            cb:()=>{
-              closeModal();
-              // Step 2: choose which of THEIR cards to reveal
-              showModal('المصوراتي 📸',`اختار رقم الكارت اللي عايز تشوفه من ${pl.name}:`,
-                pl.hand.map((_,theirIdx)=>({
-                  label:`كارت رقم ${theirIdx+1}`,
-                  cb:()=>{
-                    const revealed=pl.hand[theirIdx];
+        const all=G.players.filter(pl=>pl.hand.length>0);
+        showModal('الحربوءة 🦎','اختار اللاعب الأول:',
+          all.map(p1=>({label:p1.name,cb:()=>{
+            closeModal();
+            showModal('الحربوءة 🦎',`اختار كارت من ${p1.name}:`,
+              p1.hand.map((_,i1)=>({label:`${p1.name} كارت ${i1+1}`,cb:()=>{
+                closeModal();
+                showModal('الحربوءة 🦎','اختار اللاعب الثاني:',
+                  all.filter(p2=>p2!==p1&&p2.hand.length>0).map(p2=>({label:p2.name,cb:()=>{
                     closeModal();
-                    // Step 3: show revealed card, choose which of YOUR cards to swap
-                    showModal('المصوراتي 📸',
-                      `شفت كارت ${pl.name} رقم ${theirIdx+1}:\n${revealed.name} ${revealed.emoji}\n\nاختار كارت من يدك تبدّله بيه:`,
-                      p.hand.map((_,mi)=>({
-                        label:`كارتي رقم ${mi+1}`,
-                        cb:()=>{
-                          const myCard=p.hand.splice(mi,1)[0];
-                          const theirCard=pl.hand.splice(theirIdx,1)[0];
-                          p.hand.splice(mi,0,theirCard);
-                          pl.hand.splice(theirIdx,0,myCard);
-                          enforceHand(p);enforceHand(pl);
-                          log(`${p.name} شاف كارت ${pl.name} وبدّل كارت رقم ${mi+1} بـ"${theirCard.name}"`,'hl');
-                          closeModal();endTurn();
-                        }
-                      })),null,true);
-                  }
-                })),null,true);
-            }
-          })),null,true);
+                    showModal('الحربوءة 🦎',`اختار كارت من ${p2.name}:`,
+                      p2.hand.map((_,i2)=>({label:`${p2.name} كارت ${i2+1}`,cb:()=>{
+                        const a=p1.hand.splice(i1,1)[0];const b=p2.hand.splice(i2,1)[0];
+                        p1.hand.splice(i1,0,b);p2.hand.splice(i2,0,a);
+                        log(`${p.name} بدّل كارت ${p1.name} مع ${p2.name}`,'hl');
+                        closeModal();endTurn();
+                      }})),null,true);
+                  }})),null,true);
+              }})),null,true);
+          }})),null,true);
       }else{
-        // AI: peek random card from player 0, try futwa first, then swap if better
-        const doSpy=()=>{
-          if(G.players[0].hand.length>0&&p.hand.length>0){
-            const theirIdx=Math.floor(Math.random()*G.players[0].hand.length);
-            const theirCard=G.players[0].hand[theirIdx];
-            let worstIdx=0;
-            p.hand.forEach((cc,i)=>{if(cc.pts<p.hand[worstIdx].pts)worstIdx=i;});
-            if(theirCard.pts>p.hand[worstIdx].pts){
-              const myCard=p.hand.splice(worstIdx,1)[0];
-              const tc=G.players[0].hand.splice(theirIdx,1)[0];
-              p.hand.splice(worstIdx,0,tc);
-              G.players[0].hand.splice(theirIdx,0,myCard);
-              enforceHand(p);enforceHand(G.players[0]);
-              log(`${p.name} استخدم المصوراتي وبدّل مع ${G.players[0].name}`);
-            }
-          }
-          renderGame();setTimeout(aiNextTurn,400);
-        };
-        tryFutwa(c,pIdx,doSpy);
+        const os=G.players.filter((_,i)=>i!==pIdx&&G.players[i].hand.length>0);
+        if(os.length>=2){
+          const a=os[0].hand.splice(0,1)[0];const b=os[1].hand.splice(0,1)[0];
+          os[0].hand.unshift(b);os[1].hand.unshift(a);
+          log(`${p.name} بدّل كارت بين ${os[0].name} و${os[1].name}`);
+        }
+        renderGame();done();
       }
       break;
 
-    case 'swap2':
+    // ── مفيش مبروك: اختار لاعب يرمي ورقه ويسحب ٤ كروت جداد ──
+    case 'reshuffle':
       if(isMe){
-        const others=G.players.filter((_,i)=>i!==0);
-        showModal('الحرباوية 🦎','اختار اللاعب الأول:',
-          others.map(p1=>({label:p1.name,cb:()=>{
+        showModal('مفيش مبروك 🚫','اختار لاعب يرمي كل ورقه ويسحب ٤ كروت جديدة:',
+          others.filter(pl=>pl.hand.length>0).map(pl=>({label:`😬 ${pl.name}`,cb:()=>{
+            const doNew4=()=>{
+              pl.hand.forEach(cc=>G.discard.push(cc));
+              pl.hand=[];
+              for(let i=0;i<4;i++){refillDeckIfEmpty();if(G.deck.length>0)pl.hand.push(G.deck.pop());}
+              enforceHand(pl);
+              log(`${p.name} لعب مفيش مبروك — ${pl.name} رمى ورقه وسحب ٤ جداد!`,'warn');
+              closeModal();endTurn();
+            };
             closeModal();
-            showModal('الحرباوية 🦎',`بدّل كارت ${p1.name} مع:`,
-              others.filter(p2=>p2!==p1).map(p2=>({label:p2.name,cb:()=>{
-                if(p1.hand.length>0&&p2.hand.length>0){const a=p1.hand.splice(0,1)[0];const b=p2.hand.splice(0,1)[0];p1.hand.unshift(b);p2.hand.unshift(a);log(`${p.name} بدّل كارت بين ${p1.name} و ${p2.name}`);}
-                closeModal();endTurn();
-              }})));
-          }})));
+            if(pl===G.players[0]) tryFutwa(c,pIdx,doNew4);
+            else doNew4();
+          }})),null,true);
       }else{
-        const os=G.players.filter((_,i)=>i!==pIdx);
-        if(os.length>=2&&os[0].hand.length>0&&os[1].hand.length>0){const a=os[0].hand.splice(0,1)[0];const b=os[1].hand.splice(0,1)[0];os[0].hand.unshift(b);os[1].hand.unshift(a);}
-        renderGame();done();
+        const doNew4=()=>{
+          G.players[0].hand.forEach(cc=>G.discard.push(cc));
+          G.players[0].hand=[];
+          for(let i=0;i<4;i++){refillDeckIfEmpty();if(G.deck.length>0)G.players[0].hand.push(G.deck.pop());}
+          enforceHand(G.players[0]);
+          log(`${p.name} لعب مفيش مبروك على ${G.players[0].name} — رمى ورقه وسحب ٤ جداد!`,'warn');
+          renderGame();setTimeout(aiNextTurn,400);
+        };
+        tryFutwa(c,pIdx,doNew4);
       }
+      break;
+
+    // ── الفرقة وصلت: الكل يصفق — آخر واحد يرمي كارت من اختياره ويسحب جديد ──
+    case 'slowclap':
+      toast('🥁 الفرقة وصلت! صفق دلوقتي! 👏');
+      if(isMe){
+        showModal('الفرقة وصلت 🥁',
+          'الجميع لازم يصفق!\nآخر واحد يصفق بيرمي كارت من اختياره ويسحب جديد.\n\nهل صفقت قبل الخصوم؟',
+          [{label:'👏 صفقت أنا الأول!',cb:()=>{
+            aiSlowclapLose();closeModal();endTurn();
+          }},
+          {label:'😅 أنا كنت آخر واحد — اختار كارت أرميه',cb:()=>{
+            closeModal();
+            // اختيار أي كارت يرميه
+            showModal('الفرقة وصلت 🥁','اختار كارت ترميه وتسحب بدله:',
+              p.hand.map((cc,idx)=>({label:`${cc.name} ${cc.emoji} — كارت ${idx+1}`,cb:()=>{
+                p.hand.splice(idx,1);G.discard.push(cc);
+                refillDeckIfEmpty();
+                if(G.deck.length>0) p.hand.splice(idx,0,G.deck.pop());
+                enforceHand(p);
+                log(`${p.name} آخر واحد صفق — رمى "${cc.name}" وسحب جديد`,'warn');
+                closeModal();endTurn();
+              }})),null,true);
+          }}]);
+      }else{aiSlowclapLose();done();}
+      break;
+
+    // ── العين دخلت الفرح: كل اللاعبين يكشفون كروتهم ──
+    case 'reveal':
+      toast('👁️ العين دخلت الفرح!\nكشف الكل كروتهم!');
+      log(`${p.name} لعب العين — الكل انكشف!`,'warn');
+      // Show all hands in a modal
+      const revealInfo=G.players.map(pl=>`${pl.name}: ${pl.hand.map(cc=>cc.name+cc.emoji).join(' | ')}`).join('\n');
+      showModal('👁️ العين دخلت الفرح',revealInfo,[{label:'شفت ✓',cb:()=>{closeModal();done();}}]);
       break;
 
     default:done();
   }
 }
 
-function aiLoseCard(){
-  const ai=G.players[1+Math.floor(Math.random()*3)];
-  if(ai.hand.length>0){const c=ai.hand.splice(0,1)[0];G.discard.push(c);log(`${ai.name} آخر واحد صفق — رمى "${c.name}"`,'warn');}
+function aiSlowclapLose(){
+  // random AI (not human) loses a card and draws replacement
+  const aiPlayers=G.players.filter((_,i)=>i!==0&&G.players[i].hand.some(cc=>cc.id!=='futwa'&&cc.id!=='ibn_khal'));
+  if(aiPlayers.length===0) return;
+  const ai=aiPlayers[Math.floor(Math.random()*aiPlayers.length)];
+  const nonSpecial=ai.hand.map((cc,ii)=>({cc,ii})).filter(({cc})=>cc.id!=='futwa'&&cc.id!=='ibn_khal');
+  if(nonSpecial.length===0) return;
+  const {cc,ii}=nonSpecial[Math.floor(Math.random()*nonSpecial.length)];
+  ai.hand.splice(ii,1);
+  G.discard.push(cc);
+  refillDeckIfEmpty();
+  if(G.deck.length>0) ai.hand.splice(ii,0,G.deck.pop());
   enforceHand(ai);
+  log(`${ai.name} آخر واحد صفق — رمى "${cc.name}" وسحب جديد`,'warn');
 }
 
 /* ─── TURN FLOW ─── */
 function endTurn(){
-  G.players.forEach(p=>enforceHand(p)); // safety net
+  G.players.forEach(p=>enforceHand(p));
   checkWedding(0);if(G.over)return;
   if(G.calledEnd&&G.current===G.endBy){revealAndScore();return;}
   nextTurn();
 }
 
 function aiNextTurn(){
-  G.players.forEach(p=>enforceHand(p)); // safety net
+  G.players.forEach(p=>enforceHand(p));
   checkWedding(G.current);if(G.over)return;
   if(G.calledEnd&&G.current===G.endBy){revealAndScore();return;}
   nextTurn();
 }
 
 function nextTurn(){
-  G.current=(G.current+1)%4;
+  const n=G.players.length;
+  G.current=(G.current+1)%n;
   if(G.current===0)roundNum++;
-  if(G.calledEnd){G.turnsAfterCall++;if(G.turnsAfterCall>=4){revealAndScore();return;}}
+  // Handle القايمة skip
+  if(G.skipNext){
+    G.skipNext=false;
+    log(`📋 تم تخطي دور ${G.players[G.current].name}!`,'warn');
+    toast(`📋 دور ${G.players[G.current].name} اتخطى!`);
+    G.current=(G.current+1)%n;
+    if(G.current===0)roundNum++;
+  }
+  if(G.calledEnd){G.turnsAfterCall++;if(G.turnsAfterCall>=n){revealAndScore();return;}}
   G.phase=G.current===0?'my-turn':'ai-turn';
   renderGame();
   if(G.current!==0)setTimeout(aiTurn,950);
@@ -1046,11 +1219,17 @@ function aiTurn(){
 
   // AI does not play cards from hand — only draws or swaps with discard
 
-  // Swap with discard if top card is a good wedding/pts card (net zero: 1 in, 1 out)
-  if(G.discard.length>0&&r<0.45){
+  // Swap with discard if top card is a wedding card we don't have
+  if(G.discard.length>0&&r<0.5){
     const top=G.discard[G.discard.length-1];
-    if((top.kind==='wedding'||top.pts>=10)&&!isAction(top)&&p.hand.length===4){
-      const old=p.hand.splice(0,1,G.discard.pop())[0];G.discard.push(old);
+    const hasTop=p.hand.some(cc=>cc.id===top.id);
+    const wantWedding=top.kind==='wedding'&&!hasTop;
+    if(wantWedding&&p.hand.length===4){
+      // discard duplicate wedding or action card
+      let worstIdx=p.hand.findIndex(cc=>cc.id===top.id||(cc.kind==='wedding'&&p.hand.filter(x=>x.id===cc.id).length>1));
+      if(worstIdx<0) worstIdx=p.hand.findIndex(cc=>cc.kind!=='wedding'&&cc.id!=='futwa'&&cc.id!=='ibn_khal');
+      if(worstIdx<0) worstIdx=0;
+      const old=p.hand.splice(worstIdx,1,G.discard.pop())[0];G.discard.push(old);
       enforceHand(p);
       log(`${p.name} بدّل مع المرمية`);renderGame();setTimeout(aiNextTurn,500);return;
     }
@@ -1084,91 +1263,219 @@ function aiTurn(){
 }
 
 /* ─── WIN CHECKS ─── */
+function hasWeddingSet(hand){
+  const ids=['groom','bride','mazoun','witnesses'];
+  return ids.every(id=>hand.some(c=>c.id===id));
+}
+
+// بيتنادى بس لما لاعب يعلن صراحة "قولولي مبروك"
+// (مش تلقائي — اللاعب لازم يضغط الزرار بنفسه)
 function checkWedding(pIdx){
-  if(G.over)return;
-  const ids=G.players[pIdx].hand.map(c=>c.id);
-  if(ids.includes('groom')&&ids.includes('bride')&&ids.includes('mazoun')&&ids.includes('witnesses')){
-    // Someone completed the wedding set! Check if human (player 0) holds ibn_khal
-    const me=G.players[0];
-    const ibnIdx=me.hand.findIndex(c=>c.id==='ibn_khal');
-    if(ibnIdx>=0 && pIdx!==0){
-      // Offer the steal button to the human
-      G.over=false; // pause before declaring winner
-      showStealPrompt(pIdx, ibnIdx);
-    }else{
-      // No steal possible — declare winner
-      G.over=true;
-      const winner=G.players[pIdx];
-      winner.score+=winner.hand.filter(c=>['groom','bride','mazoun','witnesses'].includes(c.id)).reduce((s,c)=>s+c.pts,0);
-      log(`🎊 ${winner.name} أكمل الفرح!`,'win');
-      setTimeout(()=>showWin(pIdx,'wedding'),900);
+  if(G.over) return;
+  // AI: لو عنده الكروت، يعلن تلقائياً
+  if(pIdx !== 0 && hasWeddingSet(G.players[pIdx].hand)){
+    announceWin(pIdx);
+  }
+  // البشر: مش بيتحققوا هنا — بيضغطوا الزرار بنفسهم
+}
+
+// إعلان الفوز الحقيقي — بيشيك على ابن خال العروسة عند كل اللاعبين
+function announceWin(winnerIdx){
+  if(G.over) return;
+  const winner = G.players[winnerIdx];
+  const WEDDING=['groom','bride','mazoun','witnesses'];
+
+  // فحص كل اللاعبين الغير فايزين عندهم ابن خال العروسة؟
+  const stealers = G.players
+    .map((pl,i)=>({pl,i}))
+    .filter(({pl,i})=> i!==winnerIdx && pl.hand.some(c=>c.id==='ibn_khal'));
+
+  if(stealers.length > 0){
+    G.over = false; // وقف مؤقت ريحين قرار السرقة
+    // لو الإنسان (player 0) من بينهم، بنديه أولوية الاختيار
+    const humanStealer = stealers.find(({i})=>i===0);
+    if(humanStealer){
+      showStealPrompt(winnerIdx, 0);
+    } else {
+      // AI يسرق تلقائياً
+      const {i: stealerIdx} = stealers[0];
+      const stealer = G.players[stealerIdx];
+      doSteal(winnerIdx, stealerIdx);
     }
+  } else {
+    G.over = true;
+    log(`🎊 ${winner.name} قال "قولولي مبروك" وعنده الكروت!`,'win');
+    confetti();
+    setTimeout(()=>showWin(winnerIdx,'wedding'), 900);
   }
 }
 
-function showStealPrompt(winnerIdx, ibnKhalIdx){
-  const winner=G.players[winnerIdx];
-  const me=G.players[0];
-  // Show a prominent steal button
+function doSteal(winnerIdx, stealerIdx){
+  const winner = G.players[winnerIdx];
+  const stealer = G.players[stealerIdx];
+  const WEDDING=['groom','bride','mazoun','witnesses'];
+  const ibnPos = stealer.hand.findIndex(c=>c.id==='ibn_khal');
+  // اخد كروت الفرح من الفايز
+  const wed = winner.hand.filter(cc=>WEDDING.includes(cc.id));
+  const winnerRest = winner.hand.filter(cc=>!WEDDING.includes(cc.id));
+  // رمي ابن خال العروسة
+  const ibnCard = stealer.hand.splice(ibnPos,1)[0];
+  G.discard.push(ibnCard);
+  // الفايز الجديد يمسك كروت الفرح
+  stealer.hand.push(...wed);
+  // الخاسر بياخد كروت متبقية
+  winner.hand = winnerRest;
+  const toGive = stealer.hand.filter(cc=>!WEDDING.includes(cc.id)&&cc.id!=='ibn_khal');
+  const needed = Math.max(0, 4 - winner.hand.length);
+  const give = toGive.slice(0, needed);
+  give.forEach(gg=>{ const i=stealer.hand.indexOf(gg); if(i>=0) stealer.hand.splice(i,1); });
+  winner.hand.push(...give);
+  enforceHand(stealer); enforceHand(winner);
+  G.over = true;
+  log(`🦊 ${stealer.name} خطف الفرح من ${winner.name}! مش كل مبروك بتكمل!`,'win');
+  toast(`🦊 ${stealer.name} خطف الفرح!`);
+  confetti();
+  renderGame();
+  setTimeout(()=>showWin(stealerIdx,'steal'), 900);
+}
+
+function showStealPrompt(winnerIdx, stealerIdx){
+  const winner = G.players[winnerIdx];
+  const stealer = G.players[stealerIdx]; // always player 0 (human) when called from UI
+
   showModal('🦊 ابن خال العروسة!',
-    `${winner.name} أكمل الفرح!\n\nعندك ابن خال العروسة في يدك!\nعايز تسرق الفرح منه؟\n(ستأخذ الـ٤ كروت وتعطيه ٣ من يدك)`,
+    `${winner.name} قال "قولولي مبروك" وعنده الكروت الأربعة!\n\nبس انت عندك ابن خال العروسة 🦊\nتقدر تخطف الفرح منه في آخر لحظة!\n\nمش كل مبروك بتكمل... 😈`,
     [
       {label:'🦊 اسرق الفرح!', cls:'steal-btn', cb:()=>{
         closeModal();
-        const v=winner;
-        const wed=v.hand.filter(cc=>['groom','bride','mazoun','witnesses'].includes(cc.id));
-        const rest=v.hand.filter(cc=>!['groom','bride','mazoun','witnesses'].includes(cc.id));
-        // Remove ibn_khal from my hand and discard it
-        const ibnPos=me.hand.findIndex(c=>c.id==='ibn_khal');
-        const ibnCard=me.hand.splice(ibnPos,1)[0];
-        G.discard.push(ibnCard);
-        // Take winner's wedding cards
-        me.hand.push(...wed);
-        v.hand=rest;
-        // Give victim enough cards from my hand to reach 4
-        const needed=4-v.hand.length;
-        const give=me.hand.splice(0,Math.min(needed,me.hand.length));
-        v.hand.push(...give);
-        enforceHand(me);enforceHand(v);
-        me.score+=15;
-        log(`🦊 ${me.name} سرق الفرح من ${v.name}!`,'win');
-        toast('🦊 سرقت الفرح!');
-        renderGame();
-        G.over=true;
-        me.score+=me.hand.filter(c=>['groom','bride','mazoun','witnesses'].includes(c.id)).reduce((s,c)=>s+c.pts,0);
-        setTimeout(()=>showWin(0,'wedding'),900);
+        doSteal(winnerIdx, stealerIdx);
       }},
-      {label:'لأ، خليه يفوز', cb:()=>{
+      {label:'🙏 لأ، مبروك عليه', cb:()=>{
         closeModal();
-        G.over=true;
-        const winner2=G.players[winnerIdx];
-        winner2.score+=winner2.hand.filter(c=>['groom','bride','mazoun','witnesses'].includes(c.id)).reduce((s,c)=>s+c.pts,0);
-        log(`🎊 ${winner2.name} أكمل الفرح!`,'win');
-        setTimeout(()=>showWin(winnerIdx,'wedding'),900);
+        G.over = true;
+        log(`🎊 ${winner.name} فاز بالفرح!`,'win');
+        confetti();
+        setTimeout(()=>showWin(winnerIdx,'wedding'), 900);
       }}
     ], null, true);
 }
 
 function revealAndScore(){
   G.over=true;
-  G.players.forEach(p=>p.hand.forEach(c=>{p.score+=c.pts;}));
-  let minS=Infinity,winner=0;
-  G.players.forEach((p,i)=>{if(p.score<minS){minS=p.score;winner=i;}});
-  log('🎊 انتهت الجولة! كشف الأوراق...','hl');
+  // احسب نقاط كل لاعب من كروته في إيده
+  G.players.forEach(p=>p.hand.forEach(c=>{p.score+=c.pts||0;}));
+  // أعلى نقاط يفوز
+  let maxS=-Infinity, winner=0;
+  G.players.forEach((p,i)=>{if(p.score>maxS){maxS=p.score;winner=i;}});
+  log('📢 انتهت الجولة! كشف الأوراق...','hl');
+  log(`🏆 أعلى نقاط: ${G.players[winner].name} (${maxS} نقطة)`,'win');
   setTimeout(()=>showWin(winner,'score'),900);
 }
 
 function showWin(wIdx,reason){
   confetti();
   const w=G.players[wIdx];
-  $('win-h1').textContent=`مبروك ${w.name}! 🎊`;
-  $('win-sub').textContent=reason==='wedding'?'أكمل الفرح — العريس والعروسة والمأذون والشهود!':'أقل نقاط في الجولة!';
-  const sorted=[...G.players].map((p,i)=>({...p,oi:i})).sort((a,b)=>b.score-a.score);
-  $('score-board').innerHTML=sorted.map((p,i)=>`
-    <div class="score-row ${p.oi===wIdx?'champ':''}">
-      <span>${['🥇','🥈','🥉','🏅'][i]} ${p.name}</span>
-      <span>${p.score} نقطة</span>
-    </div>`).join('');
+  const isLastRound=(CURRENT_MATCH_ROUND>=TOTAL_ROUNDS);
+
+  // ── تسجيل نقاط الدور: الفايز يكسب نقطة واحدة ──
+  MATCH_SCORES[wIdx]=(MATCH_SCORES[wIdx]||0)+1;
+
+  // ── عنوان الفوز ──
+  $('win-icon').textContent = reason==='steal'?'🦊':'🎊';
+  $('win-h1').textContent=`${w.name} كسب الدور! 🎊`;
+  $('win-sub').textContent=
+    reason==='steal'? '🦊 خطف الفرح بابن خال العروسة! مش كل مبروك بتكمل!' :
+    reason==='wedding'? '🎊 جمع الكروت الأربعة وقال: قولولي مبروك!' :
+    '📢 أعلى نقاط في الجولة!';
+
+  // ── شريط تقدم الأدوار ──
+  const prog=$('rounds-progress');
+  prog.innerHTML='';
+  // اسم المباراة
+  const matchLbl=document.createElement('div');
+  matchLbl.style.cssText='font-size:.68rem;color:rgba(212,175,55,.55);letter-spacing:2px;width:100%;text-align:center;margin-bottom:.2rem;';
+  matchLbl.textContent=`الدور ${CURRENT_MATCH_ROUND} من ${TOTAL_ROUNDS}`;
+  prog.appendChild(matchLbl);
+  // النقاط الكلية (أعلى يفوز بالمباراة)
+  const maxScore=Math.max(...MATCH_SCORES);
+  const toWin=Math.ceil(TOTAL_ROUNDS/2); // الأغلبية تفوز
+  const dotsRow=document.createElement('div');
+  dotsRow.style.cssText='display:flex;gap:.35rem;justify-content:center;';
+  for(let i=1;i<=TOTAL_ROUNDS;i++){
+    const dot=document.createElement('div');
+    dot.className='rnd-dot';
+    if(i<CURRENT_MATCH_ROUND){
+      dot.className+=' done-win'; dot.textContent='✓';
+    }else if(i===CURRENT_MATCH_ROUND){
+      dot.className+=' current'; dot.textContent=i;
+    }else{
+      dot.textContent=i;
+    }
+    dotsRow.appendChild(dot);
+  }
+  prog.appendChild(dotsRow);
+
+  // ── لوحة المجموع الكلي ──
+  const totalDiv=document.createElement('div');
+  totalDiv.className='total-scores';
+  const leaderScore=Math.max(...MATCH_SCORES);
+  totalDiv.innerHTML=`<div class="total-scores-title">🏆 المجموع الكلي</div>`+
+    [...G.players].map((p,i)=>({p,i,s:MATCH_SCORES[i]}))
+      .sort((a,b)=>b.s-a.s)
+      .map(({p,i,s},rank)=>`
+        <div class="tscore-row ${s===leaderScore&&s>0?'leader':''}">
+          <span class="ts-name">${['🥇','🥈','🥉','🏅'][rank]} ${p.name}</span>
+          <span class="ts-pts">${s} / ${TOTAL_ROUNDS}</span>
+        </div>`).join('');
+
+  // ── الزرار ──
+  const btn=$('btn-next-round');
+  if(isLastRound){
+    btn.textContent='🏆 اعرض الفايز النهائي!';
+    btn.style.background='linear-gradient(135deg,#7B1A1A,#B71C1C)';
+  }else{
+    btn.textContent=`الدور ${CURRENT_MATCH_ROUND+1} ▶`;
+    btn.style.background='';
+  }
+
+  // ── تجميع في الشاشة ──
+  $('score-board').innerHTML='';
+  $('score-board').appendChild(totalDiv);
+
+  showScreen('win-screen');
+}
+
+function showFinalWinner(){
+  confetti();setTimeout(confetti,1200);
+  const bestScore=Math.max(...MATCH_SCORES);
+  const winnerIdx=MATCH_SCORES.indexOf(bestScore);
+  const winnerName=PLAYER_NAMES[winnerIdx];
+
+  $('win-icon').textContent='🏆';
+  $('win-h1').textContent=`${winnerName} فاز بالمباراة!`;
+  $('win-sub').textContent=`🎊 بعد ${TOTAL_ROUNDS} أدوار — ألف مبروك!`;
+
+  // لوحة نهائية
+  const totalDiv=document.createElement('div');
+  totalDiv.className='total-scores';
+  totalDiv.innerHTML=`<div class="total-scores-title">🏆 النتيجة النهائية</div>`+
+    PLAYER_NAMES.map((name,i)=>({name,s:MATCH_SCORES[i],i}))
+      .sort((a,b)=>b.s-a.s)
+      .map(({name,s,i},rank)=>`
+        <div class="tscore-row ${rank===0?'leader':''}">
+          <span class="ts-name">${['🥇','🥈','🥉','🏅'][rank]} ${name}</span>
+          <span class="ts-pts">${s} أدوار</span>
+        </div>`).join('');
+
+  $('rounds-progress').innerHTML=`<div style="font-size:3rem">🏆</div>`;
+  $('score-board').innerHTML='';
+  $('score-board').appendChild(totalDiv);
+
+  const btn=$('btn-next-round');
+  btn.textContent='العب مرة ثانية 🔄';
+  btn.style.background='';
+  btn.onclick=()=>location.reload();
+
   showScreen('win-screen');
 }
 
