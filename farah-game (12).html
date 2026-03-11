@@ -1,0 +1,2003 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#070200">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="الفرح">
+<meta name="application-name" content="الفرح">
+<meta name="msapplication-TileColor" content="#D4AF37">
+<link rel="manifest" id="pwa-manifest">
+<link rel="apple-touch-icon" id="pwa-icon">
+<title>لعبة الفرح</title>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<style>
+/* ═══════════════════════════════════════════
+   أجواء أفراح مصري — Egyptian Wedding Theme
+═══════════════════════════════════════════ */
+:root{
+  --gold:#D4AF37;--gold-l:#F5D76E;--gold-d:#8B6914;
+  --red:#8B1A1A;--rose:#C0392B;--green:#1B5E20;--green-l:#43A047;
+  --cream:#FFF8E7;--dark:#1A0800;--bg:#0E0500;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;}
+body{
+  font-family:'Cairo',sans-serif;
+  background:var(--bg);color:var(--cream);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+}
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 0%,rgba(212,175,55,.12) 0%,transparent 55%),
+    radial-gradient(ellipse 45% 60% at 5% 80%,rgba(139,26,26,.18) 0%,transparent 50%),
+    radial-gradient(ellipse 45% 60% at 95% 20%,rgba(139,26,26,.12) 0%,transparent 50%),
+    repeating-conic-gradient(rgba(212,175,55,.018) 0deg 30deg,transparent 30deg 60deg);
+}
+body::after{
+  content:'🏮 🪔 🏮';position:fixed;top:2px;left:50%;transform:translateX(-50%);
+  font-size:1.2rem;letter-spacing:2.5rem;opacity:.2;pointer-events:none;z-index:0;
+  animation:lanternSway 4s ease-in-out infinite;
+}
+@keyframes lanternSway{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(5px)}}
+.screen{display:none;position:relative;z-index:1;width:100%;height:100%;flex-direction:column;align-items:center;justify-content:center;}
+.screen.active{display:flex;}
+
+.rounds-picker{display:flex;gap:.5rem;justify-content:center;}
+.rnd-btn{
+  flex:1;background:rgba(212,175,55,.08);border:1px solid rgba(212,175,55,.2);
+  border-radius:10px;padding:.5rem .3rem;color:rgba(255,248,231,.6);
+  font-family:'Cairo',sans-serif;font-size:.82rem;font-weight:600;cursor:pointer;
+  transition:all .2s;
+}
+.rnd-btn.active{
+  background:linear-gradient(135deg,rgba(212,175,55,.25),rgba(212,175,55,.12));
+  border-color:rgba(212,175,55,.6);color:var(--gold-l);
+  box-shadow:0 0 12px rgba(212,175,55,.2);
+}
+.rnd-btn:hover:not(.active){border-color:rgba(212,175,55,.4);color:var(--cream);}
+
+.rounds-progress{
+  display:flex;gap:.4rem;align-items:center;justify-content:center;
+  margin:.5rem 0;flex-wrap:wrap;
+}
+.rnd-dot{
+  width:28px;height:28px;border-radius:50%;border:2px solid rgba(212,175,55,.3);
+  display:flex;align-items:center;justify-content:center;
+  font-size:.65rem;font-weight:700;color:rgba(255,248,231,.4);
+  transition:all .3s;position:relative;
+}
+.rnd-dot.done-win{
+  background:linear-gradient(135deg,var(--gold-d),var(--gold));
+  border-color:var(--gold);color:var(--dark);
+}
+.rnd-dot.done-lose{background:rgba(139,26,26,.4);border-color:rgba(139,26,26,.6);color:rgba(255,255,255,.5);}
+.rnd-dot.current{border-color:var(--gold);color:var(--gold);animation:pulseDot .9s ease-in-out infinite;}
+@keyframes pulseDot{0%,100%{box-shadow:0 0 0 0 rgba(212,175,55,.4);}50%{box-shadow:0 0 0 6px rgba(212,175,55,0);}}
+
+.total-scores{
+  background:rgba(212,175,55,.06);border:1px solid rgba(212,175,55,.15);
+  border-radius:12px;padding:.7rem 1rem;width:100%;max-width:320px;margin-top:.4rem;
+}
+.total-scores-title{font-size:.7rem;color:var(--gold);letter-spacing:2px;text-align:center;margin-bottom:.4rem;}
+.tscore-row{display:flex;justify-content:space-between;align-items:center;padding:.22rem 0;font-size:.82rem;}
+.tscore-row .ts-name{color:rgba(255,248,231,.8);}
+.tscore-row .ts-pts{color:var(--gold-l);font-weight:700;}
+.tscore-row.leader .ts-name{color:var(--gold-l);}
+.tscore-row.leader .ts-pts{color:var(--gold);}
+
+/* ── TITLE ── */
+#title-screen{gap:.7rem;padding:1.4rem;overflow-y:auto;}
+.zaffa-banner{
+  display:flex;align-items:center;gap:.5rem;
+  background:linear-gradient(90deg,transparent,rgba(212,175,55,.1),transparent);
+  border-top:1px solid rgba(212,175,55,.25);border-bottom:1px solid rgba(212,175,55,.25);
+  padding:.3rem 2rem;font-size:.68rem;color:rgba(212,175,55,.65);letter-spacing:4px;
+}
+h1.logo{
+  font-family:'Amiri',serif;
+  font-size:clamp(3.8rem,14vw,7rem);font-weight:700;
+  background:linear-gradient(180deg,var(--gold-l) 0%,var(--gold) 50%,var(--gold-d) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  filter:drop-shadow(0 0 28px rgba(212,175,55,.5));
+  line-height:1;
+}
+.logo-sub{font-size:.68rem;letter-spacing:6px;color:rgba(212,175,55,.48);margin-bottom:.1rem;}
+.tagline{font-size:.76rem;color:rgba(255,248,231,.5);background:rgba(212,175,55,.06);border:1px solid rgba(212,175,55,.14);border-radius:20px;padding:.28rem .85rem;}
+.setup-box{
+  background:linear-gradient(155deg,rgba(26,8,0,.92),rgba(14,5,0,.92));
+  border:1px solid rgba(212,175,55,.2);border-radius:20px;padding:1.3rem;width:100%;max-width:360px;
+  box-shadow:0 8px 40px rgba(0,0,0,.5),inset 0 1px 0 rgba(212,175,55,.1);
+}
+.setup-box h3{color:var(--gold);font-size:.9rem;text-align:center;margin-bottom:.8rem;}
+.p-row{display:flex;align-items:center;gap:.65rem;background:rgba(255,255,255,.03);border:1px solid rgba(212,175,55,.1);border-radius:10px;padding:.38rem .85rem;margin-bottom:.48rem;transition:border-color .2s;}
+.p-row:focus-within{border-color:rgba(212,175,55,.35);}
+.p-row span{font-size:1.1rem;}
+.p-row input{flex:1;background:transparent;border:none;outline:none;color:var(--cream);font-family:'Cairo',sans-serif;font-size:.85rem;text-align:right;}
+.p-row input::placeholder{color:rgba(255,248,231,.2);}
+.btn-big{
+  background:linear-gradient(135deg,var(--gold-d) 0%,var(--gold) 45%,var(--gold-l) 100%);
+  color:var(--dark);border:none;border-radius:50px;padding:.85rem 2.5rem;
+  font-family:'Cairo',sans-serif;font-size:1.05rem;font-weight:900;
+  cursor:pointer;box-shadow:0 6px 30px rgba(212,175,55,.4),0 2px 8px #0006;
+  transition:all .25s;width:100%;max-width:360px;position:relative;overflow:hidden;
+}
+.btn-big::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.2),transparent);transform:translateX(-100%);transition:transform .4s;}
+.btn-big:hover::before{transform:translateX(100%);}
+.btn-big:hover{transform:translateY(-3px);box-shadow:0 12px 40px rgba(212,175,55,.55);}
+
+/* ── PEEK ── */
+#peek-screen{gap:.9rem;padding:1.5rem;}
+.peek-title{font-family:'Amiri',serif;font-size:2rem;color:var(--gold);text-align:center;}
+.peek-sub{font-size:.8rem;color:rgba(255,248,231,.6);text-align:center;}
+.peek-hand{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;padding:.5rem 0;}
+.peek-timer{background:rgba(212,175,55,.1);border:1px solid rgba(212,175,55,.25);border-radius:20px;padding:.35rem 1.1rem;font-size:.82rem;color:var(--gold-l);}
+
+/* ── GAME ── */
+#game-screen{padding:0;justify-content:flex-start;overflow:hidden;}
+.top-bar{
+  width:100%;
+  background:linear-gradient(90deg,rgba(14,5,0,.97),rgba(26,8,0,.97));
+  border-bottom:2px solid transparent;
+  border-image:linear-gradient(90deg,transparent,var(--gold),var(--gold-l),var(--gold),transparent) 1;
+  padding:.5rem 1rem;display:flex;justify-content:space-between;align-items:center;
+  backdrop-filter:blur(10px);z-index:50;flex-shrink:0;
+}
+.top-title{font-family:'Amiri',serif;color:var(--gold);font-size:1.28rem;}
+.turn-badge{background:rgba(212,175,55,.1);border:1px solid rgba(212,175,55,.28);border-radius:15px;padding:.24rem .8rem;font-size:.72rem;color:var(--gold-l);}
+.game-table{flex:1;width:100%;display:flex;flex-direction:column;align-items:center;padding:.48rem .6rem;gap:.4rem;overflow-y:auto;max-width:860px;margin:0 auto;}
+.opp-row{display:flex;gap:.48rem;justify-content:center;width:100%;flex-wrap:wrap;}
+.opp-zone{
+  background:linear-gradient(155deg,rgba(26,8,0,.85),rgba(14,5,0,.85));
+  border:1px solid rgba(212,175,55,.1);border-radius:14px;
+  padding:.48rem .58rem;text-align:center;flex:1;min-width:98px;max-width:180px;transition:all .3s;position:relative;
+}
+.opp-zone.active{
+  border-color:var(--gold);
+  background:linear-gradient(155deg,rgba(212,175,55,.1),rgba(139,26,26,.08));
+  box-shadow:0 0 20px rgba(212,175,55,.22);
+}
+.opp-zone.active::before{content:'🎵';position:absolute;top:-10px;left:50%;transform:translateX(-50%);font-size:.75rem;animation:noteFloat .8s ease-in-out infinite alternate;}
+@keyframes noteFloat{from{transform:translateX(-50%) translateY(0)}to{transform:translateX(-50%) translateY(-4px)}}
+.opp-name{font-size:.67rem;color:rgba(255,248,231,.62);margin-bottom:.28rem;}
+.opp-cards{display:flex;gap:3px;justify-content:center;}
+.opp-score{font-size:.6rem;color:var(--gold-l);margin-top:.25rem;}
+.cb{width:26px;height:37px;border-radius:4px;background:linear-gradient(140deg,#5C0000,#2A0000);border:1px solid rgba(212,175,55,.38);display:flex;align-items:center;justify-content:center;font-size:.5rem;color:rgba(212,175,55,.38);}
+.center-row{display:flex;align-items:center;justify-content:center;gap:2rem;}
+.pile-wrap{display:flex;flex-direction:column;align-items:center;gap:.24rem;}
+.pile-label{font-size:.6rem;color:rgba(255,248,231,.32);}
+.deck-card{
+  width:60px;height:87px;border-radius:10px;
+  background:linear-gradient(140deg,#6B0000,#330000);
+  border:2px solid var(--gold);
+  box-shadow:3px 3px 0 #0007,0 6px 20px rgba(139,26,26,.4);
+  display:flex;align-items:center;justify-content:center;font-size:1.6rem;
+  cursor:pointer;transition:all .25s;position:relative;
+}
+.deck-card:hover{transform:translateY(-4px);box-shadow:3px 3px 0 #0007,0 10px 28px rgba(212,175,55,.3);}
+.deck-num{position:absolute;top:-8px;right:-8px;background:linear-gradient(135deg,var(--gold-d),var(--gold));color:var(--dark);border-radius:50%;width:22px;height:22px;font-size:.58rem;font-weight:900;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px #0005;}
+.discard-area{width:60px;height:87px;border-radius:10px;border:2px dashed rgba(212,175,55,.2);display:flex;align-items:center;justify-content:center;font-size:.55rem;color:rgba(212,175,55,.28);text-align:center;cursor:pointer;transition:all .2s;}
+.discard-area:hover{border-color:rgba(212,175,55,.5);}
+.discard-area.has-card{border-style:solid;border-color:var(--gold);padding:0;}
+.action-panel{display:flex;gap:.4rem;flex-wrap:wrap;justify-content:center;width:100%;}
+.btn-sm{padding:.38rem .88rem;border-radius:20px;border:none;font-family:'Cairo',sans-serif;font-size:.74rem;font-weight:700;cursor:pointer;transition:all .2s;box-shadow:0 3px 8px #0004;}
+.btn-draw{background:linear-gradient(135deg,#0D2B52,#1565C0);color:#fff;border:1px solid rgba(30,100,200,.35);}
+.btn-swap{background:linear-gradient(135deg,#1B5E20,#2E7D32);color:#fff;border:1px solid rgba(46,125,50,.35);}
+.btn-call{background:linear-gradient(135deg,#7B1A1A,#B71C1C);color:#fff;border:1px solid rgba(183,28,28,.35);}
+.btn-sm:hover:not(:disabled){transform:translateY(-2px);filter:brightness(1.2);}
+.btn-sm:disabled{opacity:.3;cursor:not-allowed;}
+.my-section{
+  width:100%;
+  background:linear-gradient(155deg,rgba(26,8,0,.88),rgba(14,5,0,.88));
+  border:1px solid rgba(212,175,55,.14);border-radius:16px;padding:.58rem;
+  box-shadow:0 -4px 20px rgba(212,175,55,.07);position:relative;overflow:hidden;
+}
+.my-section::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,rgba(212,175,55,.4),transparent);}
+.my-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:.38rem;}
+.my-name{background:rgba(212,175,55,.12);border:1px solid rgba(212,175,55,.26);border-radius:15px;padding:.2rem .78rem;font-size:.74rem;color:var(--gold-l);font-weight:700;}
+.my-pts{background:rgba(27,94,32,.18);border:1px solid rgba(67,160,71,.22);border-radius:15px;padding:.2rem .78rem;font-size:.7rem;color:var(--green-l);}
+.hand-hint{font-size:.57rem;color:rgba(255,248,231,.26);text-align:center;margin-bottom:.32rem;}
+.my-cards{display:flex;gap:7px;justify-content:center;flex-wrap:wrap;}
+
+/* ── CARD ── */
+.card{width:66px;height:95px;border-radius:10px;border:2px solid transparent;cursor:pointer;transition:transform .22s cubic-bezier(.34,1.56,.64,1),box-shadow .22s;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:5px;box-shadow:0 4px 14px #0006;user-select:none;flex-shrink:0;overflow:hidden;}
+.card:hover{transform:translateY(-10px) scale(1.04);z-index:10;}
+.card-back-face,.card-face{position:absolute;inset:0;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:5px;transition:opacity .3s;}
+.card-back-face{background:linear-gradient(140deg,#5C0000,#2A0000);font-size:1.3rem;color:rgba(212,175,55,.4);}
+.card-back-face::before{content:'🌹';position:absolute;top:3px;right:4px;font-size:.5rem;opacity:.35;}
+.card-back-face::after{content:'🌹';position:absolute;bottom:3px;left:4px;font-size:.5rem;opacity:.35;transform:rotate(180deg);}
+.card-face{opacity:0;}
+.card.revealed .card-face{opacity:1;}
+.card.revealed .card-back-face{opacity:0;}
+.c-emoji{font-size:1.4rem;line-height:1;margin-bottom:2px;}
+.c-name{font-size:.51rem;font-weight:700;line-height:1.2;text-align:center;}
+.c-pts{position:absolute;bottom:3px;right:5px;font-size:.6rem;font-weight:900;opacity:.85;}
+.c-desc{font-size:.38rem;opacity:.58;line-height:1.2;text-align:center;margin-top:2px;}
+.card.t-groom .card-face{background:linear-gradient(155deg,#0D2044,#1A3A6B);color:#B8D4FF;}
+.card.t-bride .card-face{background:linear-gradient(155deg,#3D0D22,#6B1A3A);color:#FFB8D4;}
+.card.t-mazoun .card-face{background:linear-gradient(155deg,#0D3322,#1A5C3A);color:#B8FFD4;}
+.card.t-witnesses .card-face{background:linear-gradient(155deg,#332A0D,#5C4A1A);color:#FFE4B8;}
+.card.t-bad .card-face{background:linear-gradient(155deg,#200505,#3A0A0A);color:#FF8888;}
+.card.t-action .card-face{background:linear-gradient(155deg,#0D0D22,#1A1A3A);color:#B8B8FF;}
+.card.t-special .card-face{background:linear-gradient(155deg,#170D22,#2A1A3A);color:#E8B8FF;}
+.card.t-neg .card-face{background:linear-gradient(155deg,#111,#2A2A2A);color:#AAA;}
+.card.t-defense .card-face{background:linear-gradient(155deg,#0D1F06,#1A3A0A);color:#C8FFB8;}
+.card.t-steal .card-face{background:linear-gradient(155deg,#1F1500,#3A2A00);color:#FFD88A;}
+.card.t-groom{border-color:#4A90D9;}.card.t-bride{border-color:#D94A90;}.card.t-mazoun{border-color:#4AD990;}.card.t-witnesses{border-color:#D9A84A;}.card.t-bad{border-color:#CC2222;}.card.t-action{border-color:#6666CC;}.card.t-special{border-color:#9966CC;}.card.t-neg{border-color:#555;}.card.t-defense{border-color:#66CC44;}.card.t-steal{border-color:#CC9900;}
+
+/* ── LOG ── */
+.log-strip{width:100%;max-height:50px;overflow-y:auto;border-top:1px solid rgba(212,175,55,.07);padding:.24rem .58rem;display:flex;flex-direction:column;gap:1px;flex-shrink:0;}
+.log-line{font-size:.63rem;color:rgba(255,248,231,.44);}
+.log-line.hl{color:var(--gold-l);}
+.log-line.win{color:var(--green-l);font-weight:700;}
+.log-line.warn{color:#FF7043;}
+
+/* ── MODAL ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.9);display:flex;align-items:center;justify-content:center;z-index:200;padding:1rem;backdrop-filter:blur(8px);}
+.overlay.hide{display:none;}
+.modal{
+  background:linear-gradient(155deg,#1E0A00,#0E0500);
+  border:1px solid rgba(212,175,55,.28);border-radius:22px;padding:1.6rem;max-width:380px;width:100%;
+  text-align:center;box-shadow:0 20px 60px #0009,inset 0 1px 0 rgba(212,175,55,.1);
+  animation:popIn .28s cubic-bezier(.34,1.56,.64,1);max-height:90vh;overflow-y:auto;position:relative;
+}
+.modal::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:22px 22px 0 0;background:linear-gradient(90deg,transparent,var(--gold),var(--gold-l),var(--gold),transparent);}
+@keyframes popIn{from{transform:scale(.8);opacity:0}to{transform:scale(1);opacity:1}}
+.modal-title{font-family:'Amiri',serif;font-size:1.55rem;color:var(--gold);margin-bottom:.65rem;}
+.modal-body{color:rgba(255,248,231,.8);font-size:.82rem;line-height:1.75;margin-bottom:1rem;white-space:pre-line;}
+.modal-opts{display:flex;flex-direction:column;gap:.4rem;margin-bottom:.9rem;}
+.opt-btn{background:rgba(212,175,55,.07);border:1px solid rgba(212,175,55,.18);border-radius:10px;padding:.55rem 1rem;color:var(--cream);font-family:'Cairo',sans-serif;cursor:pointer;transition:all .18s;font-size:.82rem;}
+.opt-btn:hover{background:rgba(212,175,55,.15);border-color:var(--gold);color:var(--gold);}
+.btn-cancel{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--cream);padding:.36rem 1.2rem;border-radius:15px;cursor:pointer;font-family:'Cairo',sans-serif;font-size:.75rem;}
+.card-preview-wrap{display:flex;justify-content:center;margin:.65rem 0;}
+.card-preview-wrap .card{cursor:default;pointer-events:none;}
+
+/* ── WIN ── */
+#win-screen{gap:.9rem;padding:2rem;position:relative;overflow:hidden;}
+#win-screen::before{content:'🌹 💒 🌹';position:absolute;top:12px;left:50%;transform:translateX(-50%);font-size:1.4rem;letter-spacing:1.5rem;opacity:.25;}
+.win-icon{font-size:4rem;animation:bounce 1s ease-in-out infinite alternate;margin-top:1.5rem;}
+@keyframes bounce{from{transform:scale(.9) rotate(-6deg)}to{transform:scale(1.1) rotate(6deg)}}
+.win-h1{font-family:'Amiri',serif;font-size:2.6rem;background:linear-gradient(180deg,var(--gold-l),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 0 20px rgba(212,175,55,.5));}
+.score-board{display:flex;flex-direction:column;gap:.35rem;min-width:240px;}
+.score-row{display:flex;justify-content:space-between;padding:.45rem 1rem;background:rgba(212,175,55,.06);border:1px solid rgba(212,175,55,.1);border-radius:10px;font-size:.84rem;}
+.score-row.champ{background:linear-gradient(135deg,rgba(212,175,55,.18),rgba(212,175,55,.08));border-color:var(--gold);color:var(--gold);font-weight:700;}
+
+/* ── TOAST ── */
+.toast{position:fixed;top:65px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,rgba(27,94,32,.96),rgba(46,125,50,.96));border:1px solid var(--green-l);color:#fff;padding:.6rem 1.3rem;border-radius:20px;font-size:.82rem;z-index:300;animation:tIn .25s ease,tOut .3s ease 2.4s forwards;text-align:center;white-space:pre-line;box-shadow:0 6px 20px #0004;}
+.toast.warn{background:linear-gradient(135deg,rgba(139,26,26,.96),rgba(183,28,28,.96));border-color:var(--rose);}
+@keyframes tIn{from{opacity:0;transform:translateX(-50%) translateY(-15px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+@keyframes tOut{to{opacity:0;transform:translateX(-50%) translateY(-15px)}}
+.conf{position:fixed;border-radius:2px;animation:cfall linear forwards;z-index:400;pointer-events:none;}
+@keyframes cfall{0%{transform:translateY(-80px) rotate(0)}100%{transform:translateY(110vh) rotate(720deg);opacity:0}}
+::-webkit-scrollbar{width:3px;}
+::-webkit-scrollbar-thumb{background:rgba(212,175,55,.2);border-radius:2px;}
+
+/* ── SPECIAL BTNS ── */
+.opt-btn.steal-btn{background:linear-gradient(135deg,rgba(204,153,0,.25),rgba(212,175,55,.12));border-color:var(--gold);color:var(--gold-l);font-size:.95rem;font-weight:700;animation:stealPulse 1.2s ease-in-out infinite;}
+@keyframes stealPulse{0%,100%{box-shadow:0 0 0 rgba(212,175,55,0)}50%{box-shadow:0 0 20px rgba(212,175,55,.55)}}
+.opt-btn.futwa-choice{background:linear-gradient(135deg,rgba(26,58,10,.4),rgba(42,90,18,.3));border-color:#66CC44;color:#C8FFB8;font-weight:700;}
+.opt-btn.futwa-choice:hover{background:rgba(102,204,68,.2);border-color:#88FF44;}
+
+/* ── ONLINE ── */
+.mode-tabs{display:flex;gap:.5rem;width:100%;max-width:360px;margin-bottom:.5rem;}
+.mode-tab{flex:1;padding:.45rem;border-radius:10px;border:1px solid rgba(212,175,55,.2);background:rgba(255,255,255,.03);color:rgba(255,248,231,.55);font-family:'Cairo',sans-serif;font-size:.8rem;cursor:pointer;transition:all .2s;}
+.mode-tab.active{background:rgba(212,175,55,.15);border-color:var(--gold);color:var(--gold-l);font-weight:700;}
+.online-box{background:rgba(255,255,255,.03);border:1px solid rgba(212,175,55,.18);border-radius:18px;padding:1.3rem;width:100%;max-width:360px;display:flex;flex-direction:column;gap:.65rem;}
+.online-box h3{color:var(--gold);font-size:.92rem;text-align:center;margin:0;}
+.room-display{background:rgba(212,175,55,.08);border:1px solid rgba(212,175,55,.25);border-radius:12px;padding:.7rem;text-align:center;}
+.room-code{font-size:2.2rem;font-weight:900;color:var(--gold);letter-spacing:.3em;font-family:'Cairo',sans-serif;}
+.room-hint{font-size:.68rem;color:rgba(255,248,231,.4);margin-top:.2rem;}
+.btn-outline{background:transparent;border:1px solid rgba(212,175,55,.3);color:var(--gold-l);padding:.42rem 1rem;border-radius:15px;font-family:'Cairo',sans-serif;font-size:.78rem;cursor:pointer;transition:all .2s;width:100%;}
+.btn-outline:hover{background:rgba(212,175,55,.1);border-color:var(--gold);}
+.btn-wa{background:linear-gradient(135deg,#128C7E,#25D366);color:#fff;border:none;padding:.52rem 1rem;border-radius:15px;font-family:'Cairo',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;width:100%;transition:all .2s;}
+.btn-wa:hover{filter:brightness(1.1);}
+.players-waiting,.waiting-pl{display:flex;flex-direction:column;gap:.35rem;}
+.waiting-pl{flex-direction:row;align-items:center;gap:.55rem;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:.38rem .7rem;font-size:.8rem;}
+.w-dot{width:8px;height:8px;border-radius:50%;background:#444;flex-shrink:0;transition:background .3s;}
+.w-dot.joined{background:var(--green-l);}.w-dot.me{background:var(--gold);}
+.status-lbl{text-align:center;font-size:.72rem;color:rgba(255,248,231,.4);}
+
+/* ══ PWA INSTALL BANNER ══ */
+#install-banner{
+  display:none;position:fixed;bottom:0;left:0;right:0;
+  background:linear-gradient(90deg,rgba(14,5,0,.98),rgba(42,18,0,.98));
+  border-top:1px solid rgba(212,175,55,.3);
+  padding:.8rem 1rem;z-index:500;
+  flex-direction:row;align-items:center;gap:.8rem;
+  box-shadow:0 -6px 30px rgba(0,0,0,.6);
+  animation:slideUp .4s ease;
+}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+#install-banner.show{display:flex;}
+.install-icon{font-size:2rem;filter:drop-shadow(0 0 8px rgba(212,175,55,.5));}
+.install-txt{flex:1;}
+.install-title{color:var(--gold-l);font-weight:700;font-size:.88rem;}
+.install-sub{color:rgba(255,248,231,.5);font-size:.72rem;margin-top:.1rem;}
+.install-btns{display:flex;flex-direction:column;gap:.35rem;}
+.btn-install{background:linear-gradient(135deg,var(--gold-d),var(--gold));color:var(--dark);border:none;border-radius:20px;padding:.38rem .9rem;font-family:'Cairo',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;white-space:nowrap;}
+.btn-dismiss{background:transparent;border:1px solid rgba(255,255,255,.15);color:rgba(255,248,231,.45);border-radius:20px;padding:.3rem .9rem;font-family:'Cairo',sans-serif;font-size:.72rem;cursor:pointer;white-space:nowrap;}
+
+/* ══ SPLASH / LOADING ══ */
+#splash{
+  position:fixed;inset:0;
+  background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:1rem;z-index:900;
+  transition:opacity .5s ease;
+}
+#splash.hidden{opacity:0;pointer-events:none;}
+.splash-logo{font-family:'Amiri',serif;font-size:5rem;font-weight:700;color:var(--gold);text-shadow:0 0 40px rgba(212,175,55,.7);animation:splashPulse 1.5s ease-in-out infinite;}
+@keyframes splashPulse{0%,100%{text-shadow:0 0 40px rgba(212,175,55,.7)}50%{text-shadow:0 0 80px rgba(212,175,55,1),0 0 120px rgba(212,175,55,.4)}}
+.splash-lanterns{font-size:2rem;letter-spacing:.8rem;animation:sway 2s ease-in-out infinite;}
+.splash-loading{width:120px;height:3px;background:rgba(212,175,55,.15);border-radius:2px;overflow:hidden;margin-top:.5rem;}
+.splash-bar{height:100%;width:0;background:linear-gradient(90deg,var(--gold-d),var(--gold-l));border-radius:2px;animation:loadBar 1.8s ease forwards;}
+@keyframes loadBar{0%{width:0}60%{width:80%}100%{width:100%}}
+.splash-sub{font-family:'Amiri',serif;color:rgba(212,175,55,.5);font-size:.85rem;letter-spacing:3px;}
+
+/* ══ LOGIN SCREEN ══ */
+#login-screen{gap:1.2rem;padding:2rem;padding-top:3rem;background:var(--bg);}
+.login-logo{font-family:'Amiri',serif;font-size:5rem;font-weight:700;color:var(--gold);text-shadow:0 0 40px rgba(212,175,55,.7);line-height:1;}
+.login-title{font-family:'Amiri',serif;font-size:1.4rem;color:var(--gold-l);text-align:center;}
+.login-sub{font-size:.82rem;color:rgba(255,248,231,.45);text-align:center;line-height:1.7;}
+.login-card{background:linear-gradient(160deg,rgba(42,18,0,.95),rgba(20,8,0,.95));border:1px solid rgba(212,175,55,.22);border-radius:22px;padding:2rem 1.5rem;width:100%;max-width:340px;display:flex;flex-direction:column;align-items:center;gap:1.1rem;box-shadow:0 20px 60px rgba(0,0,0,.6);}
+.login-card::before{content:'✦ ❧ ✦';font-size:.65rem;color:rgba(212,175,55,.3);letter-spacing:.5rem;font-family:'Amiri',serif;}
+.btn-google{display:flex;align-items:center;justify-content:center;gap:.75rem;background:#fff;color:#1a1a1a;border:none;border-radius:50px;padding:.85rem 1.8rem;font-family:'Cairo',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer;width:100%;box-shadow:0 4px 20px rgba(0,0,0,.4);transition:all .25s;position:relative;overflow:hidden;}
+.btn-google:hover{transform:translateY(-3px);box-shadow:0 8px 30px rgba(0,0,0,.5);}
+.btn-google:active{transform:translateY(0);}
+.btn-google svg{width:22px;height:22px;flex-shrink:0;}
+.login-divider{width:100%;display:flex;align-items:center;gap:.7rem;color:rgba(255,248,231,.2);font-size:.72rem;}
+.login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:rgba(212,175,55,.12);}
+.btn-guest{background:transparent;border:1px solid rgba(212,175,55,.25);color:rgba(255,248,231,.6);border-radius:50px;padding:.7rem 1.8rem;font-family:'Cairo',sans-serif;font-size:.85rem;cursor:pointer;width:100%;transition:all .22s;}
+.btn-guest:hover{border-color:rgba(212,175,55,.5);color:var(--gold-l);}
+.login-footer{font-size:.65rem;color:rgba(255,248,231,.2);text-align:center;line-height:1.6;}
+
+/* ══ USER AVATAR in top bar ══ */
+.user-chip{display:flex;align-items:center;gap:.45rem;background:rgba(212,175,55,.08);border:1px solid rgba(212,175,55,.2);border-radius:20px;padding:.2rem .6rem .2rem .3rem;cursor:pointer;}
+.user-avatar{width:26px;height:26px;border-radius:50%;object-fit:cover;border:1px solid rgba(212,175,55,.4);}
+.user-avatar-txt{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--gold-d),var(--gold));color:var(--dark);display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;}
+.user-name-chip{font-size:.7rem;color:var(--gold-l);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.btn-logout{background:transparent;border:none;color:rgba(255,248,231,.3);font-size:.65rem;cursor:pointer;padding:.15rem .3rem;font-family:'Cairo',sans-serif;transition:color .2s;}
+.btn-logout:hover{color:var(--rose);}
+</style>
+</head>
+<body>
+
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen" class="screen active">
+  <div class="login-logo">الفرح</div>
+  <div class="login-title">لعبة الكروت المصرية</div>
+  <div class="login-sub">العريس · العروسة · المأذون · الشهود<br>اجمعهم قبل أي حد تاني!</div>
+  <div class="login-card">
+    <button class="btn-google" onclick="loginWithGoogle()">
+      <!-- Google SVG logo -->
+      <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      تسجيل الدخول بـ Google
+    </button>
+    <div class="login-divider">أو</div>
+    <button class="btn-guest" onclick="loginAsGuest()">👤 دخول كضيف</button>
+    <div class="login-footer">بتسجيل الدخول، اسمك بيظهر لباقي اللاعبين<br>بياناتك محمية ومش بتتشارك</div>
+  </div>
+</div>
+
+<!-- TITLE -->
+<div id="title-screen" class="screen">
+  <div class="zaffa-banner">🥁 زَفَّة الفرح 🥁</div>
+  <h1 class="logo">الفرح</h1>
+  <p class="logo-sub">لعبة الكروت المخفية</p>
+  <p class="tagline">🌹 الحظ والمكر في ليلة الفرح 🌹</p>
+
+  <!-- MODE TABS -->
+  <div class="mode-tabs">
+    <button class="mode-tab active" id="tab-local" onclick="switchTab('local')">🤖 ضد الكمبيوتر</button>
+    <button class="mode-tab" id="tab-online" onclick="switchTab('online')">🌐 أونلاين</button>
+  </div>
+
+  <!-- LOCAL MODE -->
+  <div id="panel-local">
+    <div class="setup-box">
+      <h3>✍️ اكتب اسمك</h3>
+      <div class="p-row"><span>🎩</span><input id="n0" value="" placeholder="اسمك هنا…" maxlength="20" autofocus></div>
+      <div style="font-size:.68rem;color:rgba(255,248,231,.35);text-align:center;margin-top:.3rem;line-height:1.6;">
+        🎯 اجمع: العريس + العروسة + المأذون + الشهود<br>
+        وقول <strong style="color:var(--gold-l)">قولولي مبروك!</strong> لتفوز
+      </div>
+      <div style="margin-top:.9rem;">
+        <div style="font-size:.75rem;color:var(--gold);text-align:center;margin-bottom:.45rem;letter-spacing:1px;">عدد الأدوار</div>
+        <div class="rounds-picker" id="rounds-picker">
+          <button class="rnd-btn" onclick="pickRounds(3)">٣ أدوار</button>
+          <button class="rnd-btn active" onclick="pickRounds(5)">٥ أدوار</button>
+          <button class="rnd-btn" onclick="pickRounds(7)">٧ أدوار</button>
+        </div>
+      </div>
+    </div>
+    <button class="btn-big" style="margin-top:.7rem" onclick="startGame()">ابدأ الفرح! 🎉</button>
+  </div>
+
+  <!-- ONLINE MODE -->
+  <div id="panel-online" style="display:none;width:100%;max-width:360px;flex-direction:column;align-items:center;gap:.6rem;">
+
+    <!-- Sub-tabs: Create / Join -->
+    <div class="mode-tabs" style="margin-bottom:0">
+      <button class="mode-tab active" id="tab-create" onclick="switchOnlineTab('create')">➕ إنشاء غرفة</button>
+      <button class="mode-tab" id="tab-join" onclick="switchOnlineTab('join')">🔑 انضم لغرفة</button>
+    </div>
+
+    <!-- CREATE ROOM -->
+    <div id="panel-create" class="online-box">
+      <h3>إنشاء غرفة جديدة</h3>
+      <div class="p-row"><span>🎩</span><input id="on-name" value="" placeholder="اسمك (المضيف)" maxlength="20"></div>
+      <button class="btn-big" style="padding:.7rem" onclick="createRoom()">إنشاء الغرفة 🎲</button>
+
+      <!-- After room created -->
+      <div id="room-created" style="display:none;flex-direction:column;gap:.6rem;">
+        <div class="room-display">
+          <div class="room-code" id="room-code-display">----</div>
+          <div class="room-hint">شارك الكود ده مع أصحابك</div>
+        </div>
+        <button class="btn-outline" onclick="copyRoomLink()">📋 نسخ الرابط</button>
+        <button class="btn-wa" onclick="shareWhatsApp()">📲 دعوة عبر واتساب</button>
+        <div class="players-waiting" id="waiting-list"></div>
+        <div class="status-lbl" id="room-status">في انتظار اللاعبين… (١/٤)</div>
+        <button class="btn-big" id="btn-start-online" style="padding:.7rem;display:none" onclick="startOnlineGame()">ابدأ اللعبة! 🎉</button>
+      </div>
+    </div>
+
+    <!-- JOIN ROOM -->
+    <div id="panel-join" class="online-box" style="display:none">
+      <h3>انضم لغرفة</h3>
+      <div class="p-row"><span>🎩</span><input id="join-name" value="" placeholder="اسمك" maxlength="20"></div>
+      <div class="p-row"><span>🔑</span><input id="join-code" placeholder="كود الغرفة (4 أرقام)" maxlength="4" style="text-align:center;font-size:1.2rem;letter-spacing:.2em;font-weight:700"></div>
+      <button class="btn-big" style="padding:.7rem" onclick="joinRoom()">انضم! 🎉</button>
+      <div class="status-lbl" id="join-status"></div>
+
+      <!-- After joining -->
+      <div id="joined-waiting" style="display:none;flex-direction:column;gap:.5rem;">
+        <div class="room-display">
+          <div class="room-hint" style="font-size:.8rem;margin:0">✅ انضممت للغرفة</div>
+        </div>
+        <div class="players-waiting" id="joined-list"></div>
+        <div class="status-lbl" id="joined-status">في انتظار بدء اللعبة…</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- PEEK -->
+<div id="peek-screen" class="screen">
+  <div class="peek-title">👁️ انظر لأوراقك</div>
+  <p class="peek-sub" id="peek-sub">الكارت الأيمن مكشوف فقط — احفظه!</p>
+  <div class="peek-hand" id="peek-hand"></div>
+  <div class="peek-timer" id="peek-timer">⏳ ١٠ ثواني</div>
+  <button class="btn-big" style="max-width:270px;margin-top:.6rem" onclick="finishPeek()">حفظت في دماغي ✓</button>
+</div>
+
+<!-- GAME -->
+<div id="game-screen" class="screen">
+  <div class="top-bar">
+    <span class="top-title">🏮 الفرح</span>
+    <div class="turn-badge" id="turn-badge">دور: ---</div>
+    <div style="display:flex;align-items:center;gap:.4rem;">
+      <div style="font-size:.68rem;color:rgba(255,248,231,.38)" id="round-lbl">جولة ١</div>
+      <div class="user-chip" id="user-chip" onclick="showUserMenu()" style="display:none">
+        <img class="user-avatar" id="user-avatar-img" src="" style="display:none">
+        <div class="user-avatar-txt" id="user-avatar-txt">؟</div>
+        <span class="user-name-chip" id="user-name-chip">ضيف</span>
+      </div>
+    </div>
+  </div>
+  <div class="game-table">
+    <div class="opp-row" id="opp-row"></div>
+    <div class="center-row">
+      <div class="pile-wrap">
+        <div class="deck-card" id="deck-pile" onclick="onDeckClick()">🎴<div class="deck-num" id="deck-num">0</div></div>
+        <div class="pile-label">سحب</div>
+      </div>
+      <div class="pile-wrap">
+        <div class="discard-area" id="discard-pile" onclick="onDiscardClick()"><span>كومة<br>المرمية</span></div>
+        <div class="pile-label">مرمية</div>
+      </div>
+    </div>
+    <div class="action-panel">
+      <button class="btn-sm btn-draw"  id="btn-draw"     onclick="onDeckClick()">🎴 اسحب كارت</button>
+      <button class="btn-sm btn-swap"  id="btn-swap-dis" onclick="onDiscardClick()" disabled>🔄 بدّل مع المرمية</button>
+      <button class="btn-sm btn-call"  id="btn-call"     onclick="callEnd()">🎊 قولولي مبروك!</button>
+    </div>
+    <div class="my-section">
+      <div class="my-head">
+        <div class="my-name" id="my-name-lbl">---</div>
+        <div class="my-pts"  id="my-pts-lbl">نقاط: مخفية</div>
+      </div>
+      <div class="hand-hint">أوراقك مخفية | الفتوة 💪 تلمع — انقر لتفعيلها | ابن خال 🦊 زره يظهر تلقائي عند اكتمال الفرح</div>
+      <div class="my-cards" id="my-cards"></div>
+    </div>
+    <div class="log-strip" id="log-strip"></div>
+  </div>
+</div>
+
+<!-- WIN -->
+<div id="win-screen" class="screen">
+  <div class="win-icon" id="win-icon">🎊</div>
+  <div class="win-h1" id="win-h1">مبروك!</div>
+  <p style="color:rgba(255,248,231,.6);font-size:.87rem;text-align:center;max-width:300px" id="win-sub"></p>
+  <div class="rounds-progress" id="rounds-progress"></div>
+  <div class="score-board" id="score-board"></div>
+  <div style="display:flex;gap:.7rem;margin-top:1rem;width:100%;max-width:320px">
+    <button class="btn-big" id="btn-next-round" style="flex:1" onclick="nextRound()">الدور التالي ▶</button>
+    <button class="btn-big" style="flex:0 0 auto;padding:.85rem 1rem;background:rgba(212,175,55,.15);color:var(--gold);box-shadow:none;border:1px solid rgba(212,175,55,.3)" onclick="location.reload()">🔄</button>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="overlay hide" id="overlay">
+  <div class="modal">
+    <div class="modal-title" id="m-title"></div>
+    <div class="modal-body"  id="m-body"></div>
+    <div class="card-preview-wrap" id="m-preview"></div>
+    <div class="modal-opts"  id="m-opts"></div>
+    <button class="btn-cancel" id="m-cancel" onclick="closeModal()">إلغاء</button>
+  </div>
+</div>
+
+<script>
+/* ─── HAND SAFETY: always exactly 4 cards ─── */
+function enforceHand(player){
+  while(player.hand.length>4){G.discard.push(player.hand.shift());}
+  while(player.hand.length<4){refillDeckIfEmpty();if(G.deck.length===0)break;player.hand.push(G.deck.pop());}
+}
+
+/* ─── CARD DATA ─── */
+// الكروت الأساسية (الفرح): عريس×3 عروسة×3 مأذون×2 شهود×2
+// الخاص: ابن خال العروسة×1
+// الدفاع: فتوة×4
+// الأكشن: حماك×6 قايمة×3 مصوراتي×3 فرح باظ×2 نم المعازيم×4 حماتك×5 كربوعة×4 مفيش مبروك×2 فرقة وصلت×2 عين×1
+// الإجمالي = 3+3+2+2+1+4+6+3+3+2+4+5+4+2+2+1 = 47
+
+const CARDS=[
+  // ── كروت الفرح (اجمعهم تفوز!) ──
+  {id:'groom',     name:'العريس',            emoji:'🤵',pts:0, theme:'t-groom',    kind:'wedding',    desc:'اجمع الأربعة وقول: قولولي مبروك!'},
+  {id:'bride',     name:'العروسة',           emoji:'👰',pts:0, theme:'t-bride',    kind:'wedding',    desc:'اجمع الأربعة وقول: قولولي مبروك!'},
+  {id:'mazoun',    name:'المأذون',           emoji:'📜',pts:0, theme:'t-mazoun',   kind:'wedding',    desc:'اجمع الأربعة وقول: قولولي مبروك!'},
+  {id:'witnesses', name:'الشهود',            emoji:'👥',pts:0, theme:'t-witnesses',kind:'wedding',    desc:'اجمع الأربعة وقول: قولولي مبروك!'},
+  // ── الخاص ──
+  {id:'ibn_khal',  name:'ابن خال العروسة',  emoji:'🦊',pts:0, theme:'t-steal',    kind:'steal',      desc:'اخطف الفوز من اللي قال قولولي مبروك!'},
+  // ── الدفاع ──
+  {id:'futwa',     name:'الفتوة',            emoji:'💪',pts:0, theme:'t-defense',  kind:'defense',    desc:'ألغي أي أكشن ضدك — أنت تقرر'},
+  // ── الأكشن ──
+  {id:'hamak',     name:'حماك',              emoji:'👀',pts:0, theme:'t-action',   kind:'peek',       desc:'شوف كارتين من يدك أو كارت من أي لاعب'},
+  {id:'qayma',     name:'القايمة',           emoji:'📋',pts:0, theme:'t-action',   kind:'skip',       desc:'وقف دور اللاعب اللي بعدك'},
+  {id:'mussawer',  name:'المصوراتي',         emoji:'📸',pts:0, theme:'t-action',   kind:'spy',        desc:'شوف كارت من كل لاعب واختار تاخد واحد'},
+  {id:'bad_party', name:'الفرح باظ',         emoji:'💔',pts:0, theme:'t-bad',      kind:'rotate',     desc:'الكارت الأيمن بيتبدل بين كل اللاعبين'},
+  {id:'mazumin',   name:'نم المعازيم',       emoji:'🚪',pts:0, theme:'t-action',   kind:'replace',    desc:'انزل كارت من يدك واسحب واحد جديد بدله'},
+  {id:'hamatek',   name:'حماتك',             emoji:'🔄',pts:0, theme:'t-action',   kind:'swap1',      desc:'بادل كارت من عندك بكارت من أي لاعب'},
+  {id:'harba2',    name:'الحربوءة',          emoji:'🦎',pts:0, theme:'t-action',   kind:'swap2',      desc:'بادل كارت بين أي لاعبين من اختيارك'},
+  {id:'no_mabrook',name:'مفيش مبروك',        emoji:'🚫',pts:0, theme:'t-special',  kind:'reshuffle',  desc:'اختار لاعب — يرمي ورقه ويسحب ٤ جداد'},
+  {id:'farqa',     name:'الفرقة وصلت',       emoji:'🥁',pts:0, theme:'t-special',  kind:'slowclap',   desc:'الكل يصفق — آخر واحد يرمي كارت ويسحب'},
+  {id:'ain',       name:'العين دخلت الفرح',  emoji:'👁️',pts:0, theme:'t-special',  kind:'reveal',     desc:'كل اللاعبين يكشفون كروتهم!'},
+];
+
+// الأكشن اللي بتتنفذ فور السحب من الكوتشينة
+const ACTION_KINDS=['rotate','replace','peek','swap1','spy','swap2','skip','reshuffle','slowclap','reveal'];
+// 'steal' و 'defense' بيفضلوا في اليد كورق سلبي
+
+/* ─── STATE ─── */
+let G={};
+let roundNum=1;
+let peekTick=null;
+let TOTAL_ROUNDS=5;           // يتحدد قبل البدء: 3 أو 5 أو 7
+let CURRENT_MATCH_ROUND=1;    // رقم الدور الحالي في المباراة
+let MATCH_SCORES=[];          // مجموع نقاط كل لاعب عبر الأدوار
+let PLAYER_NAMES=[];          // اسماء اللاعبين تتحفظ بين الأدوار
+
+function pickRounds(n){
+  TOTAL_ROUNDS=n;
+  document.querySelectorAll('.rnd-btn').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+/* ─── HELPERS ─── */
+const $=id=>document.getElementById(id);
+function cardDef(id){return CARDS.find(c=>c.id===id);}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=0|Math.random()*(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;}
+function isAction(c){return ACTION_KINDS.includes(c.kind);}
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));$(id).classList.add('active');}
+function log(msg,cls=''){const s=$('log-strip');if(!s)return;const d=document.createElement('div');d.className='log-line '+cls;d.textContent=msg;s.prepend(d);while(s.children.length>15)s.lastChild.remove();}
+function toast(msg,type=''){const o=document.querySelector('.toast');if(o)o.remove();const t=document.createElement('div');t.className='toast '+(type==='warn'?'warn':'');t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),3200);}
+function confetti(){const cols=['#D4AF37','#FF6B6B','#4ECDC4','#45B7D1','#96CEB4','#FFEAA7','#DDA0DD'];for(let i=0;i<65;i++)setTimeout(()=>{const e=document.createElement('div');e.className='conf';e.style.cssText=`left:${Math.random()*100}vw;top:-20px;background:${cols[0|Math.random()*cols.length]};width:${6+Math.random()*10}px;height:${6+Math.random()*10}px;border-radius:${Math.random()>.5?'50%':'2px'};animation-duration:${2+Math.random()*3}s;animation-delay:${Math.random()*.6}s;`;document.body.appendChild(e);setTimeout(()=>e.remove(),5000);},i*28);}
+
+/* ─── BUILD DECK ─── */
+// Total: 3+3+2+2+1 + 4+6+3+3+2+4+5+4+2+2+1 = 47 cards
+function buildDeck(){
+  let d=[];
+  // الأعداد الرسمية للكروت:
+  const counts={
+    groom:3, bride:3, mazoun:2, witnesses:2,  // كروت الفرح
+    ibn_khal:1,                                // ابن خال العروسة
+    futwa:4,                                   // الفتوة
+    hamak:6, qayma:3, mussawer:3,             // أكشن
+    bad_party:2, mazumin:4, hamatek:5,
+    harba2:4, no_mabrook:2, farqa:2, ain:1
+  };
+  Object.entries(counts).forEach(([id,n])=>{
+    for(let i=0;i<n;i++) d.push({...cardDef(id)});
+  });
+  return shuffle(d);
+}
+
+/* ─── RESHUFFLE DISCARD INTO DECK when deck runs out ─── */
+function refillDeckIfEmpty(){
+  if(G.deck.length>0) return;
+  if(G.discard.length<=1) return; // keep top card
+  const top=G.discard.pop();           // preserve top discard
+  G.deck=shuffle([...G.discard]);      // reshuffle the rest
+  G.discard=[top];
+  log('🔀 الكوتشينة اتجددت من المرمية!','hl');
+  $('deck-num').textContent=G.deck.length;
+}
+
+/* ─── MAKE CARD EL ─── */
+function mkCard(c,revealed,clickFn){
+  const el=document.createElement('div');
+  el.className=`card ${c.theme}`+(revealed?' revealed':'');
+  el.innerHTML=`<div class="card-back-face">🎴</div>
+    <div class="card-face">
+      <div class="c-emoji">${c.emoji}</div>
+      <div class="c-name">${c.name}</div>
+      <div class="c-desc">${c.desc}</div>
+      <div class="c-pts">${c.pts>0?'+'+c.pts:c.pts!==0?c.pts:''}</div>
+    </div>`;
+  if(clickFn)el.onclick=clickFn;
+  return el;
+}
+
+/* ─── START ─── */
+function startGame(){
+  const myName=($('n0')?.value?.trim())||(currentUser?.name)||'';
+  if(!myName){toast('اكتب اسمك الأول! 😊','warn');$('n0')?.focus();return;}
+  const aiPool=['سارة','محمد','فاطمة','كريم','منى','أحمد','نورا','علي'];
+  shuffle(aiPool);
+  PLAYER_NAMES=[myName, aiPool[0], aiPool[1], aiPool[2]];
+  CURRENT_MATCH_ROUND=1;
+  MATCH_SCORES=PLAYER_NAMES.map(()=>0);
+  startRound();
+}
+
+function startRound(){
+  G={
+    players:PLAYER_NAMES.map((name,i)=>({name,hand:[],score:0,isHuman:i===0,protected:false})),
+    deck:buildDeck(),discard:[],
+    current:0,phase:'idle',over:false,
+    calledEnd:false,endBy:-1,lastRound:false,turnsAfterCall:0,
+    skipNext:false,
+  };
+  G.players.forEach(p=>{for(let i=0;i<4;i++)if(G.deck.length>0)p.hand.push(G.deck.pop());});
+  roundNum=1;
+  showPeek();
+}
+
+function nextRound(){
+  if(CURRENT_MATCH_ROUND>=TOTAL_ROUNDS){
+    showFinalWinner();
+  }else{
+    CURRENT_MATCH_ROUND++;
+    startRound();
+  }
+}
+
+/* ─── PEEK PHASE ─── */
+function showPeek(){
+  showScreen('peek-screen');
+  const me=G.players[0];
+  const h=$('peek-hand');h.innerHTML='';
+  me.hand.forEach((c,i)=>{
+    const el=mkCard(c,i===0,null); // only rightmost (index 0 in RTL)
+    el.style.cursor='default';
+    h.appendChild(el);
+  });
+  $('peek-sub').textContent=`${me.name} — الكارت الأيمن مكشوف. احفظه جيداً!`;
+  let secs=10;
+  $('peek-timer').textContent=`⏳ ${secs} ثانية`;
+  peekTick=setInterval(()=>{secs--;$('peek-timer').textContent=`⏳ ${secs} ثانية`;if(secs<=0){clearInterval(peekTick);finishPeek();}},1000);
+}
+
+function finishPeek(){
+  clearInterval(peekTick);
+  showScreen('game-screen');
+  G.phase='my-turn';
+  renderGame();
+  log(`🎊 بدأ الفرح! — دور ${G.players[0].name}`,'hl');
+}
+
+/* ─── RENDER ─── */
+function renderGame(){
+  if(G.over)return;
+  const me=G.players[0];
+  const isMy=G.current===0;
+  $('turn-badge').textContent=`دور: ${G.players[G.current].name}`;
+  $('round-lbl').textContent=`جولة ${roundNum}`;
+
+  // opponents
+  const or=$('opp-row');or.innerHTML='';
+  for(let i=1;i<4;i++){
+    const p=G.players[i];
+    const d=document.createElement('div');
+    d.className='opp-zone'+(i===G.current?' active':'');
+    d.innerHTML=`<div class="opp-name">${p.name}</div>
+      <div class="opp-cards">${p.hand.map(()=>'<div class="cb">🎴</div>').join('')}</div>
+      <div class="opp-score">نقاط: ?</div>`;
+    or.appendChild(d);
+  }
+
+  // deck
+  $('deck-num').textContent=G.deck.length;
+
+  // discard
+  const dp=$('discard-pile');
+  if(G.discard.length>0){
+    const top=G.discard[G.discard.length-1];
+    dp.innerHTML='';
+    const el=mkCard(top,true,null);
+    el.style.cssText='width:62px;height:90px;cursor:pointer;pointer-events:auto;';
+    dp.appendChild(el);
+    dp.className='discard-area has-card';
+  }else{
+    dp.innerHTML='<span>كومة<br>المرمية</span>';
+    dp.className='discard-area';
+  }
+
+  // buttons
+  $('btn-draw').disabled=!isMy||G.phase!=='my-turn';
+  $('btn-swap-dis').disabled=!isMy||G.phase!=='my-turn'||G.discard.length===0;
+  $('btn-call').disabled=!isMy||G.phase!=='my-turn';
+
+  // my hand
+  $('my-name-lbl').textContent=`🎩 ${me.name}`;
+  $('my-pts-lbl').textContent='نقاط: مخفية';
+  const mc=$('my-cards');mc.innerHTML='';
+  me.hand.forEach((c,i)=>{
+    const el=mkCard(c,false,isMy?()=>{}:null);
+    if(isMy && c.id==='futwa'){
+      el.classList.add('futwa-ready');
+      el.title='الفتوة — اضغط لتفعيلها الآن';
+      el.onclick=()=>{ if(G.phase==='my-turn') playFutwaFromHand(i); };
+    } else {
+      el.onclick=()=>{};
+    }
+    mc.appendChild(el);
+  });
+}
+
+/* ─── DECK CLICK: draw new card ─── */
+function onDeckClick(){
+  if(G.current!==0||G.phase!=='my-turn')return;
+  refillDeckIfEmpty();
+  if(G.deck.length===0){toast('الكوتشينة فضيت ومفيش مرمية!','warn');return;}
+  const drawn=G.deck.pop();
+  G.phase='drawing';
+
+  const preview=mkCard(drawn,true,null);
+  preview.style.cssText='width:68px;height:98px;cursor:default;pointer-events:none;';
+
+  if(isAction(drawn)){
+    // Action cards drawn from deck → MUST be executed immediately (no choice)
+    // Keep cards (wedding, futwa, ibn_khal) → player chooses to swap or discard
+    showModal(`سحبت: ${drawn.name} ${drawn.emoji}`,
+      `${drawn.desc}\n\n🔴 كروت الأكشن تتنفذ فوراً عند السحب!`,
+      [{label:`▶ نفّذ "${drawn.name}" الآن`,cb:()=>{closeModal();executeAction(drawn,0);}}],
+      preview, true); // hideCancelBtn = true
+  }else{
+    // Any non-action card can be swapped freely including futwa
+    const opts=G.players[0].hand.map((_,i)=>({i})).map(({i})=>({
+      label:`بدّله مع كارت رقم ${i+1} من يدي`,
+      cb:()=>{
+        const old=G.players[0].hand.splice(i,1,drawn)[0];
+        G.discard.push(old);
+        log(`${G.players[0].name} أخذ "${drawn.name}" وبدّل كارت رقم ${i+1}`,'hl');
+        closeModal();endTurn();
+      }
+    }));
+    opts.push({label:'🗑️ ارميه واحتفظ بأوراقي',cb:()=>{G.discard.push(drawn);log(`${G.players[0].name} رمى "${drawn.name}"`);closeModal();endTurn();}});
+    showModal(`سحبت: ${drawn.name} ${drawn.emoji}`,
+      `${drawn.pts>0?'+'+drawn.pts+' نقطة':drawn.pts<0?drawn.pts+' نقطة':'بدون نقاط'}\n\nاحتفظ بيه (بدّله مع كارت من يدك) أو ارميه؟`,
+      opts,preview);
+  }
+}
+
+/* ─── DISCARD CLICK: swap with top discard ─── */
+function onDiscardClick(){
+  if(G.current!==0||G.phase!=='my-turn'||G.discard.length===0)return;
+  const top=G.discard[G.discard.length-1];
+  const preview=mkCard(top,true,null);
+  preview.style.cssText='width:68px;height:98px;cursor:default;pointer-events:none;';
+  const opts=G.players[0].hand.map((_,i)=>({i})).map(({i})=>({
+    label:`بدّله مع كارت رقم ${i+1} (مش هتشوفه)`,
+    cb:()=>{
+      const taken=G.discard.pop();
+      const old=G.players[0].hand.splice(i,1,taken)[0];
+      G.discard.push(old);
+      log(`${G.players[0].name} بدّل كارت رقم ${i+1} مع "${top.name}" من المرمية`,'hl');
+      closeModal();endTurn();
+    }
+  }));
+  showModal(`بدّل مع المرمية: ${top.name} ${top.emoji}`,
+    `هتاخد "${top.name}" وتحط كارت من يدك مكانه\nبدون ما تشوف الكارت اللي بتبدّله`,
+    opts,preview);
+}
+
+/* ─── CALL END ─── */
+function callEnd(){
+  if(G.current!==0 || G.phase!=='my-turn') return;
+  const me = G.players[0];
+
+  if(hasWeddingSet(me.hand)){
+    // 🎊 عنده الكروت الأربعة — يعلن الفوز (ابن خال من لاعب تاني مش بيشتغل هنا)
+    announceWin(0);
+  } else {
+    // مش عنده الكروت — يعرض عليه يعلن نهاية الجولة
+    const missing = ['groom','bride','mazoun','witnesses']
+      .filter(id=>!me.hand.some(c=>c.id===id))
+      .map(id=>({groom:'العريس 🤵',bride:'العروسة 👰',mazoun:'المأذون 📜',witnesses:'الشهود 👥'}[id]))
+      .join('، ');
+    showModal('🎊 قولولي مبروك!',
+      `ناقصك: ${missing}\n\nمحتاج الكروت الأربعة عشان تفوز.\nعايز تعلن نهاية الجولة وأقل لاعبين يفوز؟`,
+      [{label:'📢 أعلن نهاية الجولة', cb:()=>{
+        closeModal();
+        G.calledEnd=true; G.endBy=0; G.phase='idle';
+        log(`📢 ${me.name} أعلن نهاية الجولة!`,'hl');
+        toast('📢 أعلنت نهاية الجولة!\nباقي اللاعبين جولة أخيرة...');
+        nextTurn();
+      }},
+      {label:'لأ، كمّل اللعب', cb:closeModal}]
+    );
+  }
+}
+
+/* ─── PLAY FUTWA FROM HAND ─── */
+// Called when an action is about to be executed AGAINST the human player (pIdx=0)
+// pendingFutwaAction stores { c, fromPlayerIdx } so we can resume or cancel
+let pendingFutwaAction=null;
+
+function tryFutwa(actionCard, attackerIdx, onFail){
+  const me=G.players[0];
+  const futwIdx=me.hand.findIndex(cc=>cc.id==='futwa');
+  if(futwIdx<0){onFail();return;} // no futwa → action proceeds
+
+  // Player CHOOSES whether to use futwa or let the action happen
+  showModal('💪 عندك فتوة!',
+    `${G.players[attackerIdx].name} لعب "${actionCard.name}" ضدك!\n\nعندك فتوة في يدك — عايز تستخدمها وتمنع الإجراء؟\n(لو استخدمتها هترميها من يدك)`,
+    [
+      {label:'💪 استخدم الفتوة وامنع الإجراء!', cb:()=>{
+        closeModal();
+        const fw=me.hand.splice(futwIdx,1)[0];
+        G.discard.push(fw);
+        enforceHand(me);
+        log(`${me.name} استخدم الفتوة 💪 ومنع "${actionCard.name}"!`,'hl');
+        toast('💪 الفتوة نجحت! الإجراء اتمنع');
+        G.phase='my-turn';
+        renderGame();
+        endTurn();
+      }},
+      {label:'لأ، خليه ينفذ', cb:()=>{
+        closeModal();
+        log(`${me.name} اختار يقبل "${actionCard.name}"`);
+        onFail();
+      }}
+    ], null, true);
+}
+
+function playFutwaFromHand(idx){
+  if(G.current!==0||G.phase!=='my-turn')return;
+  const card=G.players[0].hand[idx];
+  if(card.id!=='futwa')return;
+  G.players[0].hand.splice(idx,1);
+  enforceHand(G.players[0]);
+  log(`${G.players[0].name} لعب الفتوة 💪 من يده!`,'hl');
+  executeAction(card,0);
+}
+function executeAction(c,pIdx){
+  const p=G.players[pIdx];const isMe=pIdx===0;
+  log(`${p.name} نفّذ "${c.name}" ${c.emoji}`,'hl');
+  G.discard.push(c);
+  const done=()=>{checkWedding(pIdx);if(!G.over){if(isMe)endTurn();else setTimeout(aiNextTurn,600);}};
+  const others=G.players.filter((_,i)=>i!==pIdx);
+  const humans=G.players.filter((_,i)=>i===0);
+
+  switch(c.kind){
+
+    // ── حماك: شوف كارتين من يدك أو ١ من لاعب ──
+    case 'peek':
+      if(isMe){
+        const myOpts=p.hand.map((cc,i)=>({label:`👁️ كارت رقم ${i+1} من يدي`,cb:()=>{
+          closeModal();
+          showModal('حماك 👀',`كارتك رقم ${i+1}:\n${cc.name} ${cc.emoji}`,
+            [{label:'شفت ✓',cb:()=>{
+              // offer see second card
+              const rest=p.hand.filter((_,j)=>j!==i);
+              if(rest.length>0){
+                showModal('حماك 👀 — الكارت التاني',rest.map((cc2,j)=>`كارت رقم ${j>=i?j+2:j+1}: ${cc2.name} ${cc2.emoji}`).join('\n'),
+                  [{label:'تمام ✓',cb:()=>{closeModal();endTurn();}}]);
+              }else{closeModal();endTurn();}
+            }}]);
+          log(`${p.name} شاف ٢ كروت من يده`);
+        }}));
+        const oppOpts=others.map(pl=>({label:`👁️ كارت من ${pl.name}`,cb:()=>{
+          closeModal();
+          const pos=Math.floor(Math.random()*pl.hand.length);
+          const seen=pl.hand[pos];
+          showModal('حماك 👀',`${pl.name}: ${seen.name} ${seen.emoji}`,
+            [{label:'تمام ✓',cb:()=>{closeModal();endTurn();}}]);
+          log(`${p.name} شاف كارت من ${pl.name}`);
+        }}));
+        showModal('حماك 👀','شوف كارتين من يدك أو ١ من لاعب:',[...myOpts,...oppOpts]);
+      }else{done();}
+      break;
+
+    // ── القايمة: وقف دور اللي بعدك ──
+    case 'skip':
+      G.skipNext=true;
+      toast(`📋 ${p.name} لعب القايمة — دور اللي بعده هيتخطى!`);
+      log(`${p.name} لعب القايمة — الدور التالي هيتوقف`,'hl');
+      done();break;
+
+    // ── المصوراتي: شوف كارت من كل لاعب وتاخد اللي يعجبك ──
+    case 'spy':
+      if(isMe){
+        // collect one visible card from each opponent
+        const peeks=others.filter(pl=>pl.hand.length>0).map(pl=>{
+          const idx=Math.floor(Math.random()*pl.hand.length);
+          return {pl,idx,card:pl.hand[idx]};
+        });
+        if(peeks.length===0){done();break;}
+        const info=peeks.map(({pl,card})=>`${pl.name}: ${card.name} ${card.emoji}`).join('\n');
+        showModal('المصوراتي 📸',`شفت الكروت دي:\n\n${info}\n\nتاخد منهم؟`,
+          [...peeks.map(({pl,card,idx})=>({
+            label:`آخد "${card.name}" من ${pl.name}`,
+            cb:()=>{
+              closeModal();
+              // choose which of my cards to give
+              showModal('المصوراتي 📸',`اختار كارت من يدك تديه لـ${pl.name}:`,
+                p.hand.map((_,mi)=>({label:`كارتي رقم ${mi+1}`,cb:()=>{
+                  const myCard=p.hand.splice(mi,1)[0];
+                  const theirCard=pl.hand.splice(idx,1)[0];
+                  p.hand.splice(mi,0,theirCard);
+                  pl.hand.splice(idx,0,myCard);
+                  enforceHand(p);enforceHand(pl);
+                  log(`${p.name} أخد "${theirCard.name}" من ${pl.name} وديه "${myCard.name}"`,'hl');
+                  closeModal();endTurn();
+                }})),null,true);
+            }
+          })),
+          {label:'مش هاخد حاجة',cb:()=>{closeModal();endTurn();}}
+        ]);
+      }else{
+        const doSpy=()=>{
+          if(G.players[0].hand.length>0&&p.hand.length>0){
+            const theirIdx=Math.floor(Math.random()*G.players[0].hand.length);
+            const theirCard=G.players[0].hand[theirIdx];
+            let worstIdx=0;
+            p.hand.forEach((cc,i)=>{if(cc.kind==='wedding'&&theirCard.kind!=='wedding')worstIdx=i;});
+            const myCard=p.hand.splice(worstIdx,1)[0];
+            const tc=G.players[0].hand.splice(theirIdx,1)[0];
+            p.hand.splice(worstIdx,0,tc);G.players[0].hand.splice(theirIdx,0,myCard);
+            enforceHand(p);enforceHand(G.players[0]);
+            log(`${p.name} استخدم المصوراتي وبدّل مع ${G.players[0].name}`);
+          }
+          renderGame();setTimeout(aiNextTurn,400);
+        };
+        tryFutwa(c,pIdx,doSpy);
+      }
+      break;
+
+    // ── الفرح باظ: الكل يبدل كارته الأيمن مع التاني ──
+    case 'rotate':
+      {const n=G.players.length;const tmp=G.players[n-1].hand.slice();
+       for(let i=n-1;i>0;i--)G.players[i].hand=G.players[i-1].hand.slice();
+       G.players[0].hand=tmp;}
+      toast('💔 الفرح باظ!\nكل لاعب مرر أوراقه لليمين!');
+      renderGame();done();break;
+
+    // ── نم المعازيم: انزل كارت من يدك واسحب غيره ──
+    case 'replace':
+      if(isMe){
+        showModal('نم المعازيم 🚪','اختار كارت من يدك ترميه وتسحب بديله:',
+          p.hand.map((_,i)=>({label:`كارت رقم ${i+1}`,cb:()=>{
+            const old=p.hand.splice(i,1)[0];G.discard.push(old);
+            refillDeckIfEmpty();
+            if(G.deck.length>0)p.hand.splice(i,0,G.deck.pop());
+            enforceHand(p);
+            log(`${p.name} رمى كارت رقم ${i+1} وسحب جديد`);
+            closeModal();endTurn();
+          }})));
+      }else{
+        const ri=Math.floor(Math.random()*p.hand.length);
+        const old=p.hand.splice(ri,1)[0];G.discard.push(old);
+        refillDeckIfEmpty();
+        if(G.deck.length>0)p.hand.splice(ri,0,G.deck.pop());
+        enforceHand(p);done();
+      }
+      break;
+
+    // ── حماتك: بدّل كارت منك بكارت من لاعب تاني ──
+    case 'swap1':
+      if(isMe){
+        showModal('حماتك 🔄','اختار لاعب تبدل معاه:',
+          others.filter(pl=>pl.hand.length>0).map(pl=>({label:pl.name,cb:()=>{
+            closeModal();
+            showModal('حماتك 🔄',`اختار كارت من يد ${pl.name}:`,
+              pl.hand.map((_,ti)=>({label:`كارت ${pl.name} رقم ${ti+1}`,cb:()=>{
+                closeModal();
+                showModal('حماتك 🔄','اختار كارت من يدك تديه:',
+                  p.hand.map((_,mi)=>({label:`كارتي رقم ${mi+1}`,cb:()=>{
+                    const myC=p.hand.splice(mi,1)[0];const thC=pl.hand.splice(ti,1)[0];
+                    p.hand.splice(mi,0,thC);pl.hand.splice(ti,0,myC);
+                    enforceHand(p);enforceHand(pl);
+                    log(`${p.name} بدّل مع ${pl.name}`,'hl');
+                    closeModal();endTurn();
+                  }})),null,true);
+              }})),null,true);
+          }})),null,true);
+      }else{
+        const doSwap1=()=>{
+          if(G.players[0].hand.length>0&&p.hand.length>0){
+            const a=p.hand.splice(0,1)[0];const b=G.players[0].hand.splice(0,1)[0];
+            p.hand.unshift(b);G.players[0].hand.unshift(a);
+            enforceHand(p);enforceHand(G.players[0]);
+            log(`${p.name} بدّل كارت مع ${G.players[0].name}`);
+          }
+          renderGame();setTimeout(aiNextTurn,400);
+        };
+        tryFutwa(c,pIdx,doSwap1);
+      }
+      break;
+
+    // ── الكربوعة: بدّل كارتين بين لاعبين من اختيارك ──
+    case 'swap2':
+      if(isMe){
+        const all=G.players.filter(pl=>pl.hand.length>0);
+        showModal('الحربوءة 🦎','اختار اللاعب الأول:',
+          all.map(p1=>({label:p1.name,cb:()=>{
+            closeModal();
+            showModal('الحربوءة 🦎',`اختار كارت من ${p1.name}:`,
+              p1.hand.map((_,i1)=>({label:`${p1.name} كارت ${i1+1}`,cb:()=>{
+                closeModal();
+                showModal('الحربوءة 🦎','اختار اللاعب الثاني:',
+                  all.filter(p2=>p2!==p1&&p2.hand.length>0).map(p2=>({label:p2.name,cb:()=>{
+                    closeModal();
+                    showModal('الحربوءة 🦎',`اختار كارت من ${p2.name}:`,
+                      p2.hand.map((_,i2)=>({label:`${p2.name} كارت ${i2+1}`,cb:()=>{
+                        const a=p1.hand.splice(i1,1)[0];const b=p2.hand.splice(i2,1)[0];
+                        p1.hand.splice(i1,0,b);p2.hand.splice(i2,0,a);
+                        log(`${p.name} بدّل كارت ${p1.name} مع ${p2.name}`,'hl');
+                        closeModal();endTurn();
+                      }})),null,true);
+                  }})),null,true);
+              }})),null,true);
+          }})),null,true);
+      }else{
+        const os=G.players.filter((_,i)=>i!==pIdx&&G.players[i].hand.length>0);
+        if(os.length>=2){
+          const a=os[0].hand.splice(0,1)[0];const b=os[1].hand.splice(0,1)[0];
+          os[0].hand.unshift(b);os[1].hand.unshift(a);
+          log(`${p.name} بدّل كارت بين ${os[0].name} و${os[1].name}`);
+        }
+        renderGame();done();
+      }
+      break;
+
+    // ── مفيش مبروك: اختار لاعب يرمي ورقه ويسحب ٤ كروت جداد ──
+    case 'reshuffle':
+      if(isMe){
+        showModal('مفيش مبروك 🚫','اختار لاعب يرمي كل ورقه ويسحب ٤ كروت جديدة:',
+          others.filter(pl=>pl.hand.length>0).map(pl=>({label:`😬 ${pl.name}`,cb:()=>{
+            const doNew4=()=>{
+              pl.hand.forEach(cc=>G.discard.push(cc));
+              pl.hand=[];
+              for(let i=0;i<4;i++){refillDeckIfEmpty();if(G.deck.length>0)pl.hand.push(G.deck.pop());}
+              enforceHand(pl);
+              log(`${p.name} لعب مفيش مبروك — ${pl.name} رمى ورقه وسحب ٤ جداد!`,'warn');
+              closeModal();endTurn();
+            };
+            closeModal();
+            if(pl===G.players[0]) tryFutwa(c,pIdx,doNew4);
+            else doNew4();
+          }})),null,true);
+      }else{
+        const doNew4=()=>{
+          G.players[0].hand.forEach(cc=>G.discard.push(cc));
+          G.players[0].hand=[];
+          for(let i=0;i<4;i++){refillDeckIfEmpty();if(G.deck.length>0)G.players[0].hand.push(G.deck.pop());}
+          enforceHand(G.players[0]);
+          log(`${p.name} لعب مفيش مبروك على ${G.players[0].name} — رمى ورقه وسحب ٤ جداد!`,'warn');
+          renderGame();setTimeout(aiNextTurn,400);
+        };
+        tryFutwa(c,pIdx,doNew4);
+      }
+      break;
+
+    // ── الفرقة وصلت: الكل يصفق — آخر واحد يرمي كارت من اختياره ويسحب جديد ──
+    case 'slowclap':
+      toast('🥁 الفرقة وصلت! صفق دلوقتي! 👏');
+      if(isMe){
+        showModal('الفرقة وصلت 🥁',
+          'الجميع لازم يصفق!\nآخر واحد يصفق بيرمي كارت من اختياره ويسحب جديد.\n\nهل صفقت قبل الخصوم؟',
+          [{label:'👏 صفقت أنا الأول!',cb:()=>{
+            aiSlowclapLose();closeModal();endTurn();
+          }},
+          {label:'😅 أنا كنت آخر واحد — اختار كارت أرميه',cb:()=>{
+            closeModal();
+            // اختيار أي كارت يرميه
+            showModal('الفرقة وصلت 🥁','اختار كارت ترميه وتسحب بدله:',
+              p.hand.map((cc,idx)=>({label:`${cc.name} ${cc.emoji} — كارت ${idx+1}`,cb:()=>{
+                p.hand.splice(idx,1);G.discard.push(cc);
+                refillDeckIfEmpty();
+                if(G.deck.length>0) p.hand.splice(idx,0,G.deck.pop());
+                enforceHand(p);
+                log(`${p.name} آخر واحد صفق — رمى "${cc.name}" وسحب جديد`,'warn');
+                closeModal();endTurn();
+              }})),null,true);
+          }}]);
+      }else{aiSlowclapLose();done();}
+      break;
+
+    // ── العين دخلت الفرح: كل اللاعبين يكشفون كروتهم ──
+    case 'reveal':
+      toast('👁️ العين دخلت الفرح!\nكشف الكل كروتهم!');
+      log(`${p.name} لعب العين — الكل انكشف!`,'warn');
+      // Show all hands in a modal
+      const revealInfo=G.players.map(pl=>`${pl.name}: ${pl.hand.map(cc=>cc.name+cc.emoji).join(' | ')}`).join('\n');
+      showModal('👁️ العين دخلت الفرح',revealInfo,[{label:'شفت ✓',cb:()=>{closeModal();done();}}]);
+      break;
+
+    default:done();
+  }
+}
+
+function aiSlowclapLose(){
+  // random AI (not human) loses a card and draws replacement
+  const aiPlayers=G.players.filter((_,i)=>i!==0&&G.players[i].hand.some(cc=>cc.id!=='futwa'&&cc.id!=='ibn_khal'));
+  if(aiPlayers.length===0) return;
+  const ai=aiPlayers[Math.floor(Math.random()*aiPlayers.length)];
+  const nonSpecial=ai.hand.map((cc,ii)=>({cc,ii})).filter(({cc})=>cc.id!=='futwa'&&cc.id!=='ibn_khal');
+  if(nonSpecial.length===0) return;
+  const {cc,ii}=nonSpecial[Math.floor(Math.random()*nonSpecial.length)];
+  ai.hand.splice(ii,1);
+  G.discard.push(cc);
+  refillDeckIfEmpty();
+  if(G.deck.length>0) ai.hand.splice(ii,0,G.deck.pop());
+  enforceHand(ai);
+  log(`${ai.name} آخر واحد صفق — رمى "${cc.name}" وسحب جديد`,'warn');
+}
+
+/* ─── TURN FLOW ─── */
+function endTurn(){
+  G.players.forEach(p=>enforceHand(p));
+  checkWedding(0);if(G.over)return;
+  if(G.calledEnd&&G.current===G.endBy){revealAndScore();return;}
+  nextTurn();
+}
+
+function aiNextTurn(){
+  G.players.forEach(p=>enforceHand(p));
+  checkWedding(G.current);if(G.over)return;
+  if(G.calledEnd&&G.current===G.endBy){revealAndScore();return;}
+  nextTurn();
+}
+
+function nextTurn(){
+  const n=G.players.length;
+  G.current=(G.current+1)%n;
+  if(G.current===0)roundNum++;
+  // Handle القايمة skip
+  if(G.skipNext){
+    G.skipNext=false;
+    log(`📋 تم تخطي دور ${G.players[G.current].name}!`,'warn');
+    toast(`📋 دور ${G.players[G.current].name} اتخطى!`);
+    G.current=(G.current+1)%n;
+    if(G.current===0)roundNum++;
+  }
+  if(G.calledEnd){G.turnsAfterCall++;if(G.turnsAfterCall>=n){revealAndScore();return;}}
+  G.phase=G.current===0?'my-turn':'ai-turn';
+  renderGame();
+  if(G.current!==0)setTimeout(aiTurn,950);
+}
+
+/* ─── AI TURN ─── */
+function aiTurn(){
+  if(G.over||G.current===0)return;
+  const pIdx=G.current,p=G.players[pIdx];
+  checkWedding(pIdx);if(G.over)return;
+
+  const r=Math.random();
+
+  // AI does not play cards from hand — only draws or swaps with discard
+
+  // Swap with discard if top card is a wedding card we don't have
+  if(G.discard.length>0&&r<0.5){
+    const top=G.discard[G.discard.length-1];
+    const hasTop=p.hand.some(cc=>cc.id===top.id);
+    const wantWedding=top.kind==='wedding'&&!hasTop;
+    if(wantWedding&&p.hand.length===4){
+      // discard duplicate wedding or action card
+      let worstIdx=p.hand.findIndex(cc=>cc.id===top.id||(cc.kind==='wedding'&&p.hand.filter(x=>x.id===cc.id).length>1));
+      if(worstIdx<0) worstIdx=p.hand.findIndex(cc=>cc.kind!=='wedding'&&cc.id!=='futwa'&&cc.id!=='ibn_khal');
+      if(worstIdx<0) worstIdx=0;
+      const old=p.hand.splice(worstIdx,1,G.discard.pop())[0];G.discard.push(old);
+      enforceHand(p);
+      log(`${p.name} بدّل مع المرمية`);renderGame();setTimeout(aiNextTurn,500);return;
+    }
+  }
+
+  // Draw from deck
+  refillDeckIfEmpty();
+  if(G.deck.length>0){
+    const drawn=G.deck.pop();
+    if(isAction(drawn)){
+      // Must execute immediately — action cards from deck are always executed
+      executeAction(drawn,pIdx);return;
+    }
+    // Non-action: swap with weakest card in hand, discard the worse
+    if(p.hand.length===4){
+      let minPts=drawn.pts,minIdx=-1;
+      p.hand.forEach((cc,i)=>{if(cc.pts<minPts){minPts=cc.pts;minIdx=i;}});
+      if(minIdx>=0){
+        const old=p.hand.splice(minIdx,1,drawn)[0];G.discard.push(old);
+        log(`${p.name} أخذ "${drawn.name}" وبدّل كارت`);
+      }else{
+        G.discard.push(drawn);
+        log(`${p.name} رمى الكارت`);
+      }
+    }else{
+      G.discard.push(drawn);
+    }
+    enforceHand(p);
+    renderGame();setTimeout(aiNextTurn,500);
+  }else setTimeout(aiNextTurn,400);
+}
+
+/* ─── WIN CHECKS ─── */
+function hasWeddingSet(hand){
+  const ids=['groom','bride','mazoun','witnesses'];
+  return ids.every(id=>hand.some(c=>c.id===id));
+}
+
+// بيتنادى بس لما لاعب يعلن صراحة "قولولي مبروك"
+// (مش تلقائي — اللاعب لازم يضغط الزرار بنفسه)
+function checkWedding(pIdx){
+  if(G.over) return;
+  // AI: لو عنده الكروت، يعلن تلقائياً
+  if(pIdx !== 0 && hasWeddingSet(G.players[pIdx].hand)){
+    announceWin(pIdx);
+  }
+  // البشر: مش بيتحققوا هنا — بيضغطوا الزرار بنفسهم
+}
+
+// إعلان الفوز الحقيقي — بيشيك على ابن خال العروسة عند كل اللاعبين
+function announceWin(winnerIdx){
+  if(G.over) return;
+  const winner = G.players[winnerIdx];
+  const WEDDING=['groom','bride','mazoun','witnesses'];
+
+  // فحص كل اللاعبين الغير فايزين عندهم ابن خال العروسة؟
+  const stealers = G.players
+    .map((pl,i)=>({pl,i}))
+    .filter(({pl,i})=> i!==winnerIdx && pl.hand.some(c=>c.id==='ibn_khal'));
+
+  if(stealers.length > 0){
+    G.over = false; // وقف مؤقت ريحين قرار السرقة
+    // لو الإنسان (player 0) من بينهم، بنديه أولوية الاختيار
+    const humanStealer = stealers.find(({i})=>i===0);
+    if(humanStealer){
+      showStealPrompt(winnerIdx, 0);
+    } else {
+      // AI يسرق تلقائياً
+      const {i: stealerIdx} = stealers[0];
+      const stealer = G.players[stealerIdx];
+      doSteal(winnerIdx, stealerIdx);
+    }
+  } else {
+    G.over = true;
+    log(`🎊 ${winner.name} قال "قولولي مبروك" وعنده الكروت!`,'win');
+    confetti();
+    setTimeout(()=>showWin(winnerIdx,'wedding'), 900);
+  }
+}
+
+function doSteal(winnerIdx, stealerIdx){
+  const winner = G.players[winnerIdx];
+  const stealer = G.players[stealerIdx];
+  const WEDDING=['groom','bride','mazoun','witnesses'];
+  const ibnPos = stealer.hand.findIndex(c=>c.id==='ibn_khal');
+  // اخد كروت الفرح من الفايز
+  const wed = winner.hand.filter(cc=>WEDDING.includes(cc.id));
+  const winnerRest = winner.hand.filter(cc=>!WEDDING.includes(cc.id));
+  // رمي ابن خال العروسة
+  const ibnCard = stealer.hand.splice(ibnPos,1)[0];
+  G.discard.push(ibnCard);
+  // الفايز الجديد يمسك كروت الفرح
+  stealer.hand.push(...wed);
+  // الخاسر بياخد كروت متبقية
+  winner.hand = winnerRest;
+  const toGive = stealer.hand.filter(cc=>!WEDDING.includes(cc.id)&&cc.id!=='ibn_khal');
+  const needed = Math.max(0, 4 - winner.hand.length);
+  const give = toGive.slice(0, needed);
+  give.forEach(gg=>{ const i=stealer.hand.indexOf(gg); if(i>=0) stealer.hand.splice(i,1); });
+  winner.hand.push(...give);
+  enforceHand(stealer); enforceHand(winner);
+  G.over = true;
+  log(`🦊 ${stealer.name} خطف الفرح من ${winner.name}! مش كل مبروك بتكمل!`,'win');
+  toast(`🦊 ${stealer.name} خطف الفرح!`);
+  confetti();
+  renderGame();
+  setTimeout(()=>showWin(stealerIdx,'steal'), 900);
+}
+
+function showStealPrompt(winnerIdx, stealerIdx){
+  const winner = G.players[winnerIdx];
+  const stealer = G.players[stealerIdx]; // always player 0 (human) when called from UI
+
+  showModal('🦊 ابن خال العروسة!',
+    `${winner.name} قال "قولولي مبروك" وعنده الكروت الأربعة!\n\nبس انت عندك ابن خال العروسة 🦊\nتقدر تخطف الفرح منه في آخر لحظة!\n\nمش كل مبروك بتكمل... 😈`,
+    [
+      {label:'🦊 اسرق الفرح!', cls:'steal-btn', cb:()=>{
+        closeModal();
+        doSteal(winnerIdx, stealerIdx);
+      }},
+      {label:'🙏 لأ، مبروك عليه', cb:()=>{
+        closeModal();
+        G.over = true;
+        log(`🎊 ${winner.name} فاز بالفرح!`,'win');
+        confetti();
+        setTimeout(()=>showWin(winnerIdx,'wedding'), 900);
+      }}
+    ], null, true);
+}
+
+function revealAndScore(){
+  G.over=true;
+  // احسب نقاط كل لاعب من كروته في إيده
+  G.players.forEach(p=>p.hand.forEach(c=>{p.score+=c.pts||0;}));
+  // أعلى نقاط يفوز
+  let maxS=-Infinity, winner=0;
+  G.players.forEach((p,i)=>{if(p.score>maxS){maxS=p.score;winner=i;}});
+  log('📢 انتهت الجولة! كشف الأوراق...','hl');
+  log(`🏆 أعلى نقاط: ${G.players[winner].name} (${maxS} نقطة)`,'win');
+  setTimeout(()=>showWin(winner,'score'),900);
+}
+
+function showWin(wIdx,reason){
+  confetti();
+  const w=G.players[wIdx];
+  const isLastRound=(CURRENT_MATCH_ROUND>=TOTAL_ROUNDS);
+
+  // ── تسجيل نقاط الدور: الفايز يكسب نقطة واحدة ──
+  MATCH_SCORES[wIdx]=(MATCH_SCORES[wIdx]||0)+1;
+
+  // ── عنوان الفوز ──
+  $('win-icon').textContent = reason==='steal'?'🦊':'🎊';
+  $('win-h1').textContent=`${w.name} كسب الدور! 🎊`;
+  $('win-sub').textContent=
+    reason==='steal'? '🦊 خطف الفرح بابن خال العروسة! مش كل مبروك بتكمل!' :
+    reason==='wedding'? '🎊 جمع الكروت الأربعة وقال: قولولي مبروك!' :
+    '📢 أعلى نقاط في الجولة!';
+
+  // ── شريط تقدم الأدوار ──
+  const prog=$('rounds-progress');
+  prog.innerHTML='';
+  // اسم المباراة
+  const matchLbl=document.createElement('div');
+  matchLbl.style.cssText='font-size:.68rem;color:rgba(212,175,55,.55);letter-spacing:2px;width:100%;text-align:center;margin-bottom:.2rem;';
+  matchLbl.textContent=`الدور ${CURRENT_MATCH_ROUND} من ${TOTAL_ROUNDS}`;
+  prog.appendChild(matchLbl);
+  // النقاط الكلية (أعلى يفوز بالمباراة)
+  const maxScore=Math.max(...MATCH_SCORES);
+  const toWin=Math.ceil(TOTAL_ROUNDS/2); // الأغلبية تفوز
+  const dotsRow=document.createElement('div');
+  dotsRow.style.cssText='display:flex;gap:.35rem;justify-content:center;';
+  for(let i=1;i<=TOTAL_ROUNDS;i++){
+    const dot=document.createElement('div');
+    dot.className='rnd-dot';
+    if(i<CURRENT_MATCH_ROUND){
+      dot.className+=' done-win'; dot.textContent='✓';
+    }else if(i===CURRENT_MATCH_ROUND){
+      dot.className+=' current'; dot.textContent=i;
+    }else{
+      dot.textContent=i;
+    }
+    dotsRow.appendChild(dot);
+  }
+  prog.appendChild(dotsRow);
+
+  // ── لوحة المجموع الكلي ──
+  const totalDiv=document.createElement('div');
+  totalDiv.className='total-scores';
+  const leaderScore=Math.max(...MATCH_SCORES);
+  totalDiv.innerHTML=`<div class="total-scores-title">🏆 المجموع الكلي</div>`+
+    [...G.players].map((p,i)=>({p,i,s:MATCH_SCORES[i]}))
+      .sort((a,b)=>b.s-a.s)
+      .map(({p,i,s},rank)=>`
+        <div class="tscore-row ${s===leaderScore&&s>0?'leader':''}">
+          <span class="ts-name">${['🥇','🥈','🥉','🏅'][rank]} ${p.name}</span>
+          <span class="ts-pts">${s} / ${TOTAL_ROUNDS}</span>
+        </div>`).join('');
+
+  // ── الزرار ──
+  const btn=$('btn-next-round');
+  if(isLastRound){
+    btn.textContent='🏆 اعرض الفايز النهائي!';
+    btn.style.background='linear-gradient(135deg,#7B1A1A,#B71C1C)';
+  }else{
+    btn.textContent=`الدور ${CURRENT_MATCH_ROUND+1} ▶`;
+    btn.style.background='';
+  }
+
+  // ── تجميع في الشاشة ──
+  $('score-board').innerHTML='';
+  $('score-board').appendChild(totalDiv);
+
+  showScreen('win-screen');
+}
+
+function showFinalWinner(){
+  confetti();setTimeout(confetti,1200);
+  const bestScore=Math.max(...MATCH_SCORES);
+  const winnerIdx=MATCH_SCORES.indexOf(bestScore);
+  const winnerName=PLAYER_NAMES[winnerIdx];
+
+  $('win-icon').textContent='🏆';
+  $('win-h1').textContent=`${winnerName} فاز بالمباراة!`;
+  $('win-sub').textContent=`🎊 بعد ${TOTAL_ROUNDS} أدوار — ألف مبروك!`;
+
+  // لوحة نهائية
+  const totalDiv=document.createElement('div');
+  totalDiv.className='total-scores';
+  totalDiv.innerHTML=`<div class="total-scores-title">🏆 النتيجة النهائية</div>`+
+    PLAYER_NAMES.map((name,i)=>({name,s:MATCH_SCORES[i],i}))
+      .sort((a,b)=>b.s-a.s)
+      .map(({name,s,i},rank)=>`
+        <div class="tscore-row ${rank===0?'leader':''}">
+          <span class="ts-name">${['🥇','🥈','🥉','🏅'][rank]} ${name}</span>
+          <span class="ts-pts">${s} أدوار</span>
+        </div>`).join('');
+
+  $('rounds-progress').innerHTML=`<div style="font-size:3rem">🏆</div>`;
+  $('score-board').innerHTML='';
+  $('score-board').appendChild(totalDiv);
+
+  const btn=$('btn-next-round');
+  btn.textContent='العب مرة ثانية 🔄';
+  btn.style.background='';
+  btn.onclick=()=>location.reload();
+
+  showScreen('win-screen');
+}
+
+/* ─── MODAL ─── */
+function showModal(title,body,opts,preview=null,hideCancelBtn=false){
+  $('m-title').textContent=title;
+  $('m-body').textContent=body;
+  const pv=$('m-preview');pv.innerHTML='';
+  if(preview)pv.appendChild(preview);
+  const mo=$('m-opts');mo.innerHTML='';
+  opts.forEach(o=>{const b=document.createElement('button');b.className='opt-btn'+(o.cls?' '+o.cls:'');b.textContent=o.label;b.onclick=o.cb;mo.appendChild(b);});
+  const cancelBtn=$('m-cancel');
+  cancelBtn.style.display=hideCancelBtn?'none':'';
+  $('overlay').classList.remove('hide');
+}
+
+function closeModal(){
+  $('overlay').classList.add('hide');
+  if(!G.over){G.phase=G.current===0?'my-turn':'ai-turn';renderGame();}
+}
+
+/* ════════════════════════════════════════
+   FIREBASE — Auth + Realtime DB
+════════════════════════════════════════ */
+const FB_CONFIG={
+  apiKey:"AIzaSyDxyTDVM9NXudPTeT5Qyf75Xpqd7eFSoQQ",
+  authDomain:"elfarrah-96851.firebaseapp.com",
+  databaseURL:"https://elfarrah-96851-default-rtdb.firebaseio.com",
+  projectId:"elfarrah-96851",
+  storageBucket:"elfarrah-96851.firebasestorage.app",
+  messagingSenderId:"185121549042",
+  appId:"1:185121549042:web:6995adb21069891eef3e6b",
+  measurementId:"G-WVHDH6XC6K"
+};
+
+let fbApp=null, fbDB=null, fbAuth=null;
+let currentUser=null; // { uid, name, email, photo, isGuest }
+let onlineRoom=null, myPlayerId=null, myPlayerIndex=-1, isHost=false;
+let guestCounter=Math.floor(100+Math.random()*900);
+
+/* ── Init Firebase (once) ── */
+function initFirebase(){
+  if(fbApp) return true;
+  try{
+    fbApp=firebase.initializeApp(FB_CONFIG);
+    fbDB=firebase.database();
+    fbAuth=firebase.auth();
+
+    // Watch auth state
+    fbAuth.onAuthStateChanged(user=>{
+      if(user){
+        currentUser={
+          uid:user.uid,
+          name:user.displayName||user.email?.split('@')[0]||'مجهول',
+          email:user.email||'',
+          photo:user.photoURL||'',
+          isGuest:user.isAnonymous
+        };
+        onUserLoggedIn();
+      } else {
+        currentUser=null;
+      }
+    });
+    return true;
+  }catch(e){ console.error('Firebase init error:',e); return false; }
+}
+
+/* ── Called when user is authenticated ── */
+function onUserLoggedIn(){
+  // Fill player name fields automatically
+  const nm=currentUser.name;
+  const n0=$('n0'); if(n0 && (n0.value==='أنت'||n0.value==='')) n0.value=nm;
+  const on=$('on-name'); if(on && (on.value==='أنت'||on.value==='')) on.value=nm;
+  const jn=$('join-name'); if(jn && (jn.value==='أنا'||jn.value==='')) jn.value=nm;
+
+  // Update user chip in top bar
+  const chip=$('user-chip');
+  const avatarTxt=$('user-avatar-txt');
+  const avatarImg=$('user-avatar-img');
+  const nameChip=$('user-name-chip');
+  if(chip){
+    chip.style.display='flex';
+    if(nameChip) nameChip.textContent=nm.split(' ')[0];
+    if(currentUser.photo && avatarImg){
+      avatarImg.src=currentUser.photo;
+      avatarImg.style.display='block';
+      if(avatarTxt) avatarTxt.style.display='none';
+    } else if(avatarTxt){
+      avatarTxt.textContent=nm.charAt(0)||'؟';
+    }
+  }
+
+  // Show title screen
+  showScreen('title-screen');
+}
+
+/* ── Google Sign-In ── */
+function loginWithGoogle(){
+  if(!initFirebase()){ alert('خطأ في الاتصال بـ Firebase'); return; }
+  const btn=document.querySelector('.btn-google');
+  if(btn){ btn.textContent='⏳ جاري الدخول…'; btn.disabled=true; }
+
+  const provider=new firebase.auth.GoogleAuthProvider();
+  provider.setCustomParameters({prompt:'select_account'});
+
+  fbAuth.signInWithPopup(provider)
+    .then(result=>{
+      // onAuthStateChanged will handle the rest
+    })
+    .catch(err=>{
+      console.error('Google login error:',err);
+      if(btn){ btn.innerHTML='<svg viewBox="0 0 48 48" style="width:22px;height:22px"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg> تسجيل الدخول بـ Google'; btn.disabled=false; }
+      let msg='حصل خطأ في تسجيل الدخول';
+      if(err.code==='auth/popup-blocked') msg='المتصفح منع النافذة المنبثقة!\nفعّل الـ Popup للموقع أو جرب مرة تانية';
+      else if(err.code==='auth/cancelled-popup-request') return;
+      else if(err.code==='auth/unauthorized-domain') msg='الدومين مش مضاف في Firebase!\nروح Authentication → Settings → Authorized domains';
+      toast(msg,'warn');
+    });
+}
+
+/* ── Guest login ── */
+function loginAsGuest(){
+  if(!initFirebase()){ guestFallback(); return; }
+  fbAuth.signInAnonymously()
+    .then(result=>{
+      currentUser={
+        uid:result.user.uid,
+        name:`ضيف ${guestCounter}`,
+        email:'',photo:'',isGuest:true
+      };
+      onUserLoggedIn();
+    })
+    .catch(()=>guestFallback());
+}
+
+function guestFallback(){
+  currentUser={uid:'guest-'+Date.now(),name:`ضيف ${guestCounter}`,email:'',photo:'',isGuest:true};
+  onUserLoggedIn();
+}
+
+/* ── Logout ── */
+function logout(){
+  closeModal();
+  if(fbAuth) fbAuth.signOut().catch(()=>{});
+  currentUser=null;
+  showScreen('login-screen');
+  const chip=$('user-chip'); if(chip) chip.style.display='none';
+}
+
+/* ── User menu ── */
+function showUserMenu(){
+  if(!currentUser) return;
+  const isGoogle=!currentUser.isGuest;
+  showModal(
+    '👤 حسابك',
+    `الاسم: ${currentUser.name}${currentUser.email?'\nالإيميل: '+currentUser.email:'\n(دخول كضيف)'}`,
+    [
+      isGoogle?null:{label:'🔗 ربط بحساب Google',cb:()=>{closeModal();loginWithGoogle();}},
+      {label:'🚪 تسجيل الخروج',cb:logout}
+    ].filter(Boolean)
+  );
+}
+
+/* ── Init Firebase on page load (to check existing session) ── */
+window.addEventListener('DOMContentLoaded', ()=>{
+  initFirebase();
+});
+
+
+/* ── TAB SWITCHING ── */
+function switchTab(mode){
+  $('tab-local').className='mode-tab'+(mode==='local'?' active':'');
+  $('tab-online').className='mode-tab'+(mode==='online'?' active':'');
+  $('panel-local').style.display=mode==='local'?'block':'none';
+  $('panel-online').style.display=mode==='online'?'flex':'none';
+}
+
+function switchOnlineTab(sub){
+  $('tab-create').className='mode-tab'+(sub==='create'?' active':'');
+  $('tab-join').className='mode-tab'+(sub==='join'?' active':'');
+  $('panel-create').style.display=sub==='create'?'flex':'none';
+  $('panel-join').style.display=sub==='join'?'flex':'none';
+}
+
+/* ── GENERATE ROOM CODE ── */
+function genCode(){return String(Math.floor(1000+Math.random()*9000));}
+function uid(){return Math.random().toString(36).slice(2,10);}
+
+/* ── CREATE ROOM ── */
+async function createRoom(){
+  const name=(currentUser?.name)||$('on-name').value.trim()||'المضيف';
+  if(!initFirebase()){showFBError();return;}
+  myPlayerId=uid(); isHost=true; myPlayerIndex=0;
+  const code=genCode();
+  onlineRoom=code;
+
+  const roomRef=fbDB.ref(`rooms/${code}`);
+  await roomRef.set({
+    code, status:'waiting', host:myPlayerId,
+    players:{
+      [myPlayerId]:{name,index:0,joined:true}
+    },
+    deck:null, gameState:null, created:Date.now()
+  });
+
+  // Listen for player joins
+  roomRef.child('players').on('value', snap=>{
+    const players=snap.val()||{};
+    updateWaitingUI(players, code);
+  });
+
+  // Listen for game start
+  roomRef.child('status').on('value', snap=>{
+    if(snap.val()==='started') loadOnlineGame(code);
+  });
+
+  $('room-code-display').textContent=code;
+  $('room-created').style.display='flex';
+}
+
+function updateWaitingUI(players, code){
+  const list=Object.values(players).sort((a,b)=>a.index-b.index);
+  const slots=['🎩','🌹','🎭','🎊'];
+  $('waiting-list').innerHTML=list.map((p,i)=>`
+    <div class="waiting-pl">
+      <div class="w-dot ${p.index===myPlayerIndex?'me':'joined'}"></div>
+      <span>${slots[p.index]||'👤'} ${p.name}</span>
+      ${p.index===myPlayerIndex?'<span style="font-size:.65rem;color:var(--gold-l);margin-right:auto">أنت</span>':''}
+    </div>`).join('');
+  const n=list.length;
+  $('room-status').textContent=`في انتظار اللاعبين… (${n}/٤)`;
+  const startBtn=$('btn-start-online');
+  if(isHost && n>=2){
+    startBtn.style.display='block';
+    startBtn.textContent=`ابدأ مع ${n} لاعبين! 🎉`;
+  } else {
+    startBtn.style.display='none';
+  }
+}
+
+/* ── JOIN ROOM ── */
+async function joinRoom(){
+  const name=(currentUser?.name)||$('join-name').value.trim()||'لاعب';
+  const code=$('join-code').value.trim();
+  if(code.length!==4){$('join-status').textContent='❌ الكود لازم يكون 4 أرقام';return;}
+  if(!initFirebase()){showFBError();return;}
+
+  $('join-status').textContent='🔍 بنبحث عن الغرفة…';
+  myPlayerId=uid(); isHost=false; onlineRoom=code;
+
+  const roomRef=fbDB.ref(`rooms/${code}`);
+  const snap=await roomRef.once('value');
+  if(!snap.exists()){$('join-status').textContent='❌ الغرفة مش موجودة';return;}
+  if(snap.val().status==='started'){$('join-status').textContent='❌ اللعبة بدأت بالفعل';return;}
+
+  const existingPlayers=Object.values(snap.val().players||{});
+  if(existingPlayers.length>=4){$('join-status').textContent='❌ الغرفة ممتلئة (4/4)';return;}
+
+  myPlayerIndex=existingPlayers.length;
+  await roomRef.child(`players/${myPlayerId}`).set({name,index:myPlayerIndex,joined:true});
+
+  $('join-status').textContent='';
+  $('joined-waiting').style.display='flex';
+
+  // Listen for other players
+  roomRef.child('players').on('value', snap=>{
+    const players=snap.val()||{};
+    const list=Object.values(players).sort((a,b)=>a.index-b.index);
+    const slots=['🎩','🌹','🎭','🎊'];
+    $('joined-list').innerHTML=list.map(p=>`
+      <div class="waiting-pl">
+        <div class="w-dot ${p.joined?'joined':''}"></div>
+        <span>${slots[p.index]||'👤'} ${p.name}</span>
+      </div>`).join('');
+    $('joined-status').textContent=`في انتظار بدء اللعبة… (${list.length}/٤)`;
+  });
+
+  // Listen for game start
+  roomRef.child('status').on('value', snap=>{
+    if(snap.val()==='started') loadOnlineGame(code);
+  });
+}
+
+/* ── START ONLINE GAME (host only) ── */
+async function startOnlineGame(){
+  const roomRef=fbDB.ref(`rooms/${onlineRoom}`);
+  const snap=await roomRef.once('value');
+  const players=Object.values(snap.val().players||{}).sort((a,b)=>a.index-b.index);
+
+  // Build game state
+  const names=players.map(p=>p.name);
+  while(names.length<4) names.push(`لاعب ${names.length+1}`);
+  const deck=buildDeck();
+  const hands=names.map(()=>[]);
+  for(let i=0;i<4;i++) hands.forEach(h=>h.push(deck.pop()));
+
+  const gameState={
+    players:names.map((name,i)=>({name,hand:hands[i],score:0,protected:false})),
+    deck, discard:[], current:0, phase:'peek',
+    over:false, calledEnd:false, endBy:-1, turnsAfterCall:0,
+    playerIds:players.map(p=>p.index) // mapping
+  };
+
+  await roomRef.update({status:'started', gameState, round:1});
+}
+
+/* ── LOAD ONLINE GAME ── */
+async function loadOnlineGame(code){
+  const roomRef=fbDB.ref(`rooms/${code}`);
+  const snap=await roomRef.once('value');
+  const data=snap.val();
+
+  G={...data.gameState};
+  roundNum=data.round||1;
+
+  // Determine if it's my turn based on myPlayerIndex
+  G.onlineMode=true;
+  G.myIndex=myPlayerIndex;
+
+  showScreen('game-screen');
+  renderGame();
+  log(`🌐 اللعبة الأونلاين بدأت!`,'hl');
+
+  // Listen for state changes
+  roomRef.child('gameState').on('value', snap=>{
+    if(!snap.val()) return;
+    const newState=snap.val();
+    G={...newState, onlineMode:true, myIndex:myPlayerIndex};
+    renderGame();
+    if(G.over) return;
+    if(G.current===myPlayerIndex) {
+      G.phase='my-turn';
+      toast('دورك! 🎴');
+    }
+  });
+}
+
+/* ── PUSH STATE (online) ── */
+async function pushOnlineState(){
+  if(!G.onlineMode||!onlineRoom) return;
+  const roomRef=fbDB.ref(`rooms/${onlineRoom}`);
+  const {onlineMode,myIndex,...stateToSave}=G;
+  await roomRef.update({gameState:stateToSave, round:roundNum});
+}
+
+/* ── SHARE / INVITE ── */
+function copyRoomLink(){
+  const code=$('room-code-display').textContent;
+  const url=`${location.href.split('?')[0]}?room=${code}`;
+  navigator.clipboard?.writeText(url).then(()=>toast('✅ تم نسخ الرابط!')).catch(()=>{
+    toast(`كود الغرفة: ${code}`);
+  });
+}
+
+function shareWhatsApp(){
+  const code=$('room-code-display').textContent;
+  const url=`${location.href.split('?')[0]}?room=${code}`;
+  const msg=`🎊 العب معايا لعبة الفرح!\nكود الغرفة: *${code}*\nأو افتح الرابط ده:\n${url}`;
+  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`,'_blank');
+}
+
+/* ── AUTO-JOIN FROM URL ── */
+(function autoJoinFromURL(){
+  const params=new URLSearchParams(location.search);
+  const room=params.get('room');
+  if(room&&room.length===4){
+    switchTab('online');
+    switchOnlineTab('join');
+    setTimeout(()=>{
+      $('join-code').value=room;
+      $('join-status').textContent=`🔗 تم اكتشاف غرفة: ${room}`;
+    },300);
+  }
+})();
+
+/* ── FIREBASE ERROR ── */
+function showFBError(){
+  showModal('⚠️ الأونلاين غير متاح',
+    'عشان تلعب أونلاين مع أصحابك:\n\n١. احفظ الصفحة دي على سيرفر\n٢. أو استخدم خدمة مثل GitHub Pages\n٣. وأضف بيانات Firebase الخاصة بيك في الكود\n\nفي الوقت الحالي العب ضد الكمبيوتر!',
+    [{label:'العب ضد الكمبيوتر',cb:()=>{closeModal();switchTab('local');}}]
+  );
+}
+
+/* ════════════════════════════════
+   PWA — Splash + Manifest + Service Worker + Install
+════════════════════════════════ */
+
+function hideSplash(){
+  const sp=document.getElementById('splash');
+  if(!sp) return;
+  sp.style.transition='opacity .5s ease';
+  sp.style.opacity='0';
+  sp.style.pointerEvents='none';
+  setTimeout(()=>{ try{sp.parentNode.removeChild(sp);}catch(e){} }, 600);
+}
+
+// إخفاء الـ splash بعد ثانيتين بالظبط — مفيش انتظار لأي حاجة
+setTimeout(hideSplash, 2000);
+// نسخة احتياطية لو أي حاجة اتأخرت
+window.addEventListener('load', ()=>setTimeout(hideSplash, 500));
+document.addEventListener('DOMContentLoaded', ()=>setTimeout(hideSplash, 2000));
+
+// ── Generate icon via canvas ──
+function makeIcon(size){
+  try{
+    const c=document.createElement('canvas');
+    c.width=c.height=size;
+    const ctx=c.getContext('2d');
+    const bg=ctx.createRadialGradient(size/2,size/2,0,size/2,size/2,size/2);
+    bg.addColorStop(0,'#2A1200');bg.addColorStop(1,'#070200');
+    ctx.fillStyle=bg;ctx.fillRect(0,0,size,size);
+    ctx.strokeStyle='#D4AF37';ctx.lineWidth=size*.04;
+    ctx.beginPath();ctx.arc(size/2,size/2,size*.44,0,Math.PI*2);ctx.stroke();
+    ctx.fillStyle='#D4AF37';
+    ctx.font=`bold ${size*.42}px serif`;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.shadowColor='rgba(212,175,55,.8)';ctx.shadowBlur=size*.1;
+    ctx.fillText('ف',size/2,size/2);
+    return c.toDataURL('image/png');
+  }catch(e){ return ''; }
+}
+
+// ── Inline Manifest ──
+try{
+  const icon192=makeIcon(192), icon512=makeIcon(512), icon72=makeIcon(72);
+  const manifest={
+    name:'الفرح — لعبة الكروت',short_name:'الفرح',
+    description:'لعبة كروت مصرية للأفراح',
+    start_url:'./',display:'standalone',orientation:'portrait',
+    background_color:'#070200',theme_color:'#D4AF37',lang:'ar',dir:'rtl',
+    categories:['games'],
+    icons:[
+      {src:icon72,sizes:'72x72',type:'image/png',purpose:'any maskable'},
+      {src:icon192,sizes:'192x192',type:'image/png',purpose:'any maskable'},
+      {src:icon512,sizes:'512x512',type:'image/png',purpose:'any maskable'}
+    ]
+  };
+  const mBlob=new Blob([JSON.stringify(manifest)],{type:'application/json'});
+  const mEl=document.getElementById('pwa-manifest');
+  if(mEl) mEl.href=URL.createObjectURL(mBlob);
+  const iEl=document.getElementById('pwa-icon');
+  if(iEl && icon192) iEl.href=icon192;
+}catch(e){}
+
+// ── Service Worker ──
+if('serviceWorker' in navigator){
+  try{
+    const sw=`
+const V='farah-v2';
+self.addEventListener('install',e=>{self.skipWaiting();});
+self.addEventListener('activate',e=>{
+  e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==V).map(k=>caches.delete(k)))));
+  self.clients.claim();
+});
+self.addEventListener('fetch',e=>{
+  if(e.request.method!=='GET')return;
+  e.respondWith(
+    caches.open(V).then(c=>
+      c.match(e.request).then(r=>r||fetch(e.request).then(nr=>{
+        c.put(e.request,nr.clone());return nr;
+      }))
+    ).catch(()=>caches.match('./'))
+  );
+});`;
+    const swBlob=new Blob([sw],{type:'application/javascript'});
+    navigator.serviceWorker.register(URL.createObjectURL(swBlob),{scope:'./'});
+  }catch(e){}
+}
+
+// ── Install prompt ──
+let deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();deferredPrompt=e;
+  setTimeout(()=>{
+    const b=document.getElementById('install-banner');
+    if(b&&localStorage.getItem('pwa-dismissed')!=='1') b.classList.add('show');
+  },4000);
+});
+window.addEventListener('appinstalled',()=>{ dismissInstall(); toast('🎊 تم تثبيت اللعبة!'); });
+
+function installPWA(){
+  if(deferredPrompt){
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(r=>{ if(r.outcome==='accepted') toast('🎊 جاري التثبيت…'); deferredPrompt=null; });
+  }else{
+    showModal('📲 كيف تثبّت اللعبة',
+      'على أندرويد / كروم:\n١. اضغط ⋮ (القائمة)\n٢. اختار "تثبيت التطبيق"\n\nعلى آيفون / سفاري:\n١. اضغط زر المشاركة ⬆️\n٢. اختار "إضافة للشاشة الرئيسية"',
+      [{label:'تمام ✓',cb:closeModal}]);
+  }
+  dismissInstall();
+}
+function dismissInstall(){
+  const b=document.getElementById('install-banner');
+  if(b){ b.classList.remove('show'); }
+  localStorage.setItem('pwa-dismissed','1');
+}
+
+// ── Prevent pull-to-refresh & context menu ──
+document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault();},{passive:false});
+document.addEventListener('contextmenu',e=>e.preventDefault());
+</script>
+
+<!-- SPLASH SCREEN -->
+<div id="splash">
+  <div class="splash-lanterns">🏮 🪔 🏮</div>
+  <div class="splash-logo">الفرح</div>
+  <div class="splash-sub">لعبة الكروت المصرية</div>
+  <div class="splash-loading"><div class="splash-bar"></div></div>
+</div>
+
+<!-- PWA INSTALL BANNER -->
+<div id="install-banner">
+  <div class="install-icon">🎊</div>
+  <div class="install-txt">
+    <div class="install-title">ثبّت اللعبة على موبايلك!</div>
+    <div class="install-sub">العب بدون إنترنت في أي وقت</div>
+  </div>
+  <div class="install-btns">
+    <button class="btn-install" onclick="installPWA()">📲 ثبّت</button>
+    <button class="btn-dismiss" onclick="dismissInstall()">لاحقاً</button>
+  </div>
+</div>
+
+</body>
+</html>
